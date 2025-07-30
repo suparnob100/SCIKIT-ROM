@@ -1,0 +1,108 @@
+# utils.visualization.generate_vtu { #skrom.utils.visualization.generate_vtu }
+
+`utils.visualization.generate_vtu`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [build_mesh_from_params](#skrom.utils.visualization.generate_vtu.build_mesh_from_params) | Construct a SciKit-FEM mesh from JSON parameter entries. |
+| [convert_to_vtu_series](#skrom.utils.visualization.generate_vtu.convert_to_vtu_series) | Convert NumPy solution snapshots to a VTU series with PVD index. |
+
+### build_mesh_from_params { #skrom.utils.visualization.generate_vtu.build_mesh_from_params }
+
+```python
+utils.visualization.generate_vtu.build_mesh_from_params(p)
+```
+
+Construct a SciKit-FEM mesh from JSON parameter entries.
+
+Reads domain dimensions and mesh refinement factor from a parameter dictionary
+and uses them to build a finite-element mesh via the `domain` factory.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type   | Description                                                                                                                                                                                                                                                                                                                                                                                                      | Default    |
+|--------|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| p      | dict   | Dictionary of mesh parameters. Expected keys (3D): - ``lx`` : float, optional     Domain length in the x-direction (default is 1.0). - ``ly`` : float, optional     Domain length in the y-direction (default is 1.0). - ``lz`` : float, optional     Domain length in the z-direction (default is 1.0). - ``factor`` : int, optional     Mesh refinement factor controlling element subdivision (default is 4). | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type   | Description                                                                               |
+|--------|--------|-------------------------------------------------------------------------------------------|
+| mesh   | Mesh   | A SciKit-FEM mesh object constructed with the specified dimensions and refinement factor. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> params = {'lx': 2.0, 'ly': 1.0, 'lz': 0.5, 'factor': 6}
+>>> mesh = build_mesh_from_params(params)
+>>> mesh.p.shape  # number of spatial dimensions and nodes
+(3, N)
+```
+
+#### Notes {.doc-section .doc-section-notes}
+
+- If any of the dimension keys are missing, defaults of 1.0 each are used.
+- `factor` must be convertible to int; non-integer inputs will be cast.
+
+### convert_to_vtu_series { #skrom.utils.visualization.generate_vtu.convert_to_vtu_series }
+
+```python
+utils.visualization.generate_vtu.convert_to_vtu_series(
+    root_dir,
+    sol_file_name='u_solution.npy',
+    vtu_folder_name='VTU',
+    steps=300,
+    stride=10,
+)
+```
+
+Convert NumPy solution snapshots to a VTU series with PVD index.
+
+Scans all subdirectories under `root_dir` for pairs of ``params.json`` and
+solution files, rebuilds the corresponding mesh, writes VTU files for each
+snapshot at intervals defined by `stride` up to `steps`, and aggregates
+outputs into a PVD file for streamlined visualization.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name            | Type        | Description                                                                                   | Default            |
+|-----------------|-------------|-----------------------------------------------------------------------------------------------|--------------------|
+| root_dir        | str or Path | Base directory to search recursively for solution runs.                                       | _required_         |
+| sol_file_name   | str         | Filename of the NumPy solution array (default is ``"u_solution.npy"``).                       | `'u_solution.npy'` |
+| vtu_folder_name | str         | Name of the subfolder to create for VTU outputs in each run directory (default is ``"VTU"``). | `'VTU'`            |
+| steps           | int         | Maximum number of time steps to process from each solution array (default is 300).            | `300`              |
+| stride          | int         | Interval between snapshots to write (every `stride` steps) (default is 10).                   | `10`               |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name      | Type   | Description                                                                                                |
+|-----------|--------|------------------------------------------------------------------------------------------------------------|
+| processed | int    | Total number of run folders processed (i.e., those containing both ``params.json`` and the solution file). |
+
+#### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type    | Description                                                                |
+|--------|---------|----------------------------------------------------------------------------|
+|        | IOError | If reading ``params.json`` or the NumPy array fails for a detected folder. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> n = convert_to_vtu_series(
+...     'sim_runs', sol_file_name='solutions/u.npy',
+...     vtu_folder_name='VTU_out', steps=200, stride=5
+... )
+>>> print(f"Processed {n} runs.")
+```
+
+#### Notes {.doc-section .doc-section-notes}
+
+- Existing ``root_dir`` contents are not modified or deleted; new VTU folders
+  are created alongside original data.
+- Uses `tqdm` for a progress bar when scanning directories.
+- PVD writer organizes all snapshot VTU files for each run into a single
+  index file for use with ParaView or similar tools.

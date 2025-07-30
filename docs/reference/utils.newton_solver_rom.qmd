@@ -1,0 +1,54 @@
+# utils.newton_solver_rom { #skrom.utils.newton_solver_rom }
+
+`utils.newton_solver_rom`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [newton_solver_rom](#skrom.utils.newton_solver_rom.newton_solver_rom) | Solve a nonlinear system with Newton's method + dense LU factorization. |
+
+### newton_solver_rom { #skrom.utils.newton_solver_rom.newton_solver_rom }
+
+```python
+utils.newton_solver_rom.newton_solver_rom(
+    assemble_func,
+    u_rom,
+    *args,
+    tol=1e-06,
+    maxit=50,
+    jac_tol=0.1,
+    **kwargs,
+)
+```
+
+Solve a nonlinear system with Newton's method + dense LU factorization.
+Reuses LU factorization when the reduced Jacobian changes by less than jac_tol.
+
+Parameters:
+  assemble_func : callable
+      Function that returns (J_rom, RHS_rom). Must accept
+      u_rom as its first argument, then *args and **kwargs.
+  u_rom         : ndarray
+      Initial guess for the reduced state; will be updated in place.
+  *args         :
+      Positional args forwarded to assemble_func
+      (e.g. u_old_rom, bc_data).
+  tol           : float
+      Convergence threshold on ‖Δu‖.
+  maxit         : int
+      Maximum Newton iterations.
+  jac_tol       : float
+      Threshold on relative Frobenius‐norm change in Jacobian
+      to trigger a refactorization.
+  **kwargs      :
+      Keyword args forwarded to assemble_func (e.g. i=iteration).
+
+Returns:
+  ndarray
+    The converged u_rom.
+
+Raises:
+  RuntimeError if LU factorization fails or no convergence in maxit.

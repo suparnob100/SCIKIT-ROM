@@ -1,0 +1,99 @@
+# utils.reduced_basis.svd { #skrom.utils.reduced_basis.svd }
+
+`utils.reduced_basis.svd`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [svd_mode_selector](#skrom.utils.reduced_basis.svd.svd_mode_selector) | Select SVD modes based on relative reconstruction-error tolerance and plot the error. |
+| [svd_mode_selector_var](#skrom.utils.reduced_basis.svd.svd_mode_selector_var) | Select SVD modes based on an uncaptured variance tolerance and plot the uncaptured variance. |
+
+### svd_mode_selector { #skrom.utils.reduced_basis.svd.svd_mode_selector }
+
+```python
+utils.reduced_basis.svd.svd_mode_selector(
+    data,
+    tolerance=0.001,
+    modes=False,
+    **kwargs,
+)
+```
+
+Select SVD modes based on relative reconstruction-error tolerance and plot the error.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name      | Type                                                                  | Description                                                                                       | Default    |
+|-----------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|------------|
+| data      | (array_like, shape(n_samples, n_features) or (n_features, n_samples)) | Input data matrix. Columns (or rows) represent snapshots or observations.                         | _required_ |
+| tolerance | float                                                                 | Maximum allowed relative reconstruction error (L2-norm) for the selected modes. Defaults to 1e-3. | `0.001`    |
+| modes     | bool                                                                  | If True, prints the number of selected modes. Defaults to False.                                  | `False`    |
+| **kwargs  |                                                                       | Additional keyword arguments passed to the plot (e.g., marker style, line width).                 | `{}`       |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name               | Type                                     | Description                                                                        |
+|--------------------|------------------------------------------|------------------------------------------------------------------------------------|
+| num_selected_modes | int                                      | Number of SVD modes required to meet the specified reconstruction-error tolerance. |
+| U                  | (ndarray, shape(n_features, n_features)) | Matrix of left singular vectors from the SVD of the input data.                    |
+
+#### Notes {.doc-section .doc-section-notes}
+
+- Singular values are flipped to compute residual energy from smallest to largest modes.
+- Relative reconstruction error is defined as the square-root of uncaptured energy divided by
+  total energy.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> num_modes, U = svd_mode_selector(data_matrix, tolerance=1e-2)
+>>> print(num_modes)
+4
+```
+
+### svd_mode_selector_var { #skrom.utils.reduced_basis.svd.svd_mode_selector_var }
+
+```python
+utils.reduced_basis.svd.svd_mode_selector_var(
+    data,
+    tolerance=0.001,
+    modes=False,
+    **kwargs,
+)
+```
+
+Select SVD modes based on an uncaptured variance tolerance and plot the uncaptured variance.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name      | Type                                                                  | Description                                                                                                 | Default    |
+|-----------|-----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|------------|
+| data      | (array_like, shape(n_samples, n_features) or (n_features, n_samples)) | Input data matrix. Columns (or rows) represent snapshots or observations.                                   | _required_ |
+| tolerance | float                                                                 | Maximum allowed fraction of total variance that remains uncaptured by the selected modes. Defaults to 1e-3. | `0.001`    |
+| modes     | bool                                                                  | If True, prints the number of selected modes. Defaults to False.                                            | `False`    |
+| **kwargs  |                                                                       | Additional keyword arguments passed to the plot (e.g., marker style, line width).                           | `{}`       |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name               | Type                                     | Description                                                                       |
+|--------------------|------------------------------------------|-----------------------------------------------------------------------------------|
+| num_selected_modes | int                                      | Number of SVD modes required to meet the specified uncaptured variance tolerance. |
+| U                  | (ndarray, shape(n_features, n_features)) | Matrix of left singular vectors from the SVD of the input data.                   |
+
+#### Notes {.doc-section .doc-section-notes}
+
+- The function computes the full SVD of the (transposed) data matrix and calculates the
+  cumulative sum of squared singular values to measure variance content.
+- Uncaptured variance is defined as one minus the cumulative energy.
+- A horizontal line at `y = tolerance` is drawn on the semilog plot for reference.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> num_modes, U = svd_mode_selector_var(data_matrix, tolerance=1e-2)
+>>> print(num_modes)
+5
+```

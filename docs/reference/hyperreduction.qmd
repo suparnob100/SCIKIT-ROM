@@ -1,0 +1,16 @@
+# hyperreduction { #skrom.hyperreduction }
+
+`hyperreduction`
+
+The `hyperreduce` package provides tools to perform hyper‐reduction on full‐order models.
+
+Contents:
+  - `bilinear_form_hyperrom.py` & `linear_form_hyperrom.py`: Classes that cluster elements
+    by free‐DOF counts, project local stiffness/load contributions onto reduced bases,
+    and assemble global reduced matrices/vectors.
+  - `hyperreduce.py`: End‐to‐end pipeline combining randomized SVD preprocessing with
+    bounded NNLS solves for weight selection, plus plotting diagnostics.
+  - `custom_nnls.py`: Wrapped NNLS solver specialized for hyper‐reduction constraints.
+
+These modules streamline the construction of sparse, hyper‐reduced operators and right‐hand
+sides for fast, accurate reduced‐order simulations.

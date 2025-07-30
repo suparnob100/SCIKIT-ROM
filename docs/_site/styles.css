@@ -1,0 +1,73 @@
+/* css styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
+
+
+body {
+  font-family: Lora, Noto Sans, Lora, Helvetica, Arial, sans-serif;
+}
+
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Roboto Slab, Helvetica, Arial, sans-serif;
+}
+
+.navbar-nav > li > a,
+.navbar-brand {
+  font-family: Lora, Roboto Slab, Helvetica, Arial, sans-serif;
+}
+
+p {
+text-align: justify;
+text-justify: inter-word; /* spreads words evenly */
+}
+
+
+
+/* --- Controls row --- */
+.pub-controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.pub-controls input,
+.pub-controls select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+}
+
+/* Target the sidebar's scrollable area */
+.sidebar-navigation .quarto-sidebar-section-body {
+  
+  /* --- For the scrollbar track (the background) --- */
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1; /* Light grey track */
+  }
+
+  /* --- For the scrollbar handle (the part you drag) --- */
+  &::-webkit-scrollbar-thumb {
+    background: #888; /* Darker grey handle */
+    border-radius: 5px; /* Rounded corners on the handle */
+  }
+
+  /* --- For the scrollbar handle on hover --- */
+  &::-webkit-scrollbar-thumb:hover {
+    background: #555; /* Even darker handle on hover */
+  }
+  
+  /* --- For the scrollbar itself (width) --- */
+  &::-webkit-scrollbar {
+    width: 8px; /* Make the scrollbar thinner */
+  }
+}
+
+
+/* Add this to the end of your styles.css file */
+
+.page-header {
+  text-align: center;
+  margin-bottom: 3rem; /* Adds some nice space below the header */

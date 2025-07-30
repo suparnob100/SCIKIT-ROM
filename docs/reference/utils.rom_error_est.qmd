@@ -1,0 +1,75 @@
+# utils.rom_error_est { #skrom.utils.rom_error_est }
+
+`utils.rom_error_est`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [compute_rom_error_metrics_flat](#skrom.utils.rom_error_est.compute_rom_error_metrics_flat) | Compute ROM error metrics for data shaped (n_snapshots, n_points). |
+| [generate_rom_error_report](#skrom.utils.rom_error_est.generate_rom_error_report) | Print a structured summary of ROM error metrics. |
+| [plot_rom_error_diagnostics_flat](#skrom.utils.rom_error_est.plot_rom_error_diagnostics_flat) | Plot ROM error diagnostics for flat (time x space) data. |
+
+### compute_rom_error_metrics_flat { #skrom.utils.rom_error_est.compute_rom_error_metrics_flat }
+
+```python
+utils.rom_error_est.compute_rom_error_metrics_flat(u, u_rom, K=None)
+```
+
+Compute ROM error metrics for data shaped (n_snapshots, n_points).
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type                                            | Description                                          | Default    |
+|--------|-------------------------------------------------|------------------------------------------------------|------------|
+| u      | (array_like, shape(n_snap, n_space))            | Full-order field (each row is one snapshot in time). | _required_ |
+| u_rom  | array_like, same shape as u                     | ROM reconstruction.                                  | _required_ |
+| K      | (array_like, optional, shape(n_space, n_space)) | Stiffness matrix for energy‐norm error.              | `None`     |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name    | Type   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|---------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| metrics | dict   | {   # time‐dependent   'L2_error_time':           ndarray (n_snap,),   'relative_L2_error_time':  ndarray (n_snap,),   'RMSE_time':               ndarray (n_snap,),   'MAE_time':                ndarray (n_snap,),   'time_avg_rel_L2_error':   float,   # global   'L2_error':                float,   'relative_L2_error':       float,   'Linf_error':              float,   'RMSE':                    float,   'MAE':                     float,   'R2':                      float,   'explained_variance':      float,   'quantiles': {      'median_error': float,      'p95_error':   float   },   # if K is given   'energy_norm_error':       float } |
+
+### generate_rom_error_report { #skrom.utils.rom_error_est.generate_rom_error_report }
+
+```python
+utils.rom_error_est.generate_rom_error_report(
+    metrics,
+    name='ROM Accuracy Report',
+)
+```
+
+Print a structured summary of ROM error metrics.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name    | Type   | Description                                 | Default                 |
+|---------|--------|---------------------------------------------|-------------------------|
+| metrics | dict   | Output from compute_rom_error_metrics_flat. | _required_              |
+| name    | str    | Title of the report.                        | `'ROM Accuracy Report'` |
+
+### plot_rom_error_diagnostics_flat { #skrom.utils.rom_error_est.plot_rom_error_diagnostics_flat }
+
+```python
+utils.rom_error_est.plot_rom_error_diagnostics_flat(
+    u,
+    u_rom,
+    metrics,
+    spatial_shape=None,
+)
+```
+
+Plot ROM error diagnostics for flat (time x space) data.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name          | Type                                 | Description                                                  | Default    |
+|---------------|--------------------------------------|--------------------------------------------------------------|------------|
+| u             | (array_like, shape(n_snap, n_space)) |                                                              | _required_ |
+| u_rom         | array_like, same shape               |                                                              | _required_ |
+| metrics       | dict                                 | Output from compute_rom_error_metrics_flat.                  | _required_ |
+| spatial_shape | tuple                                | (nx, ny) to reshape each snapshot back to 2D for pcolormesh. | `None`     |

@@ -1,0 +1,20 @@
+---
+title: "Welcome to skrom"
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    page-layout: article
+    css: styles.css
+    toc: true
+---
+
+{{< include resources/intro/rom_intro_ex.md >}}
+
+
+## Recommended Reading
+
+To dive deeper, check out:
+
+- [Hyper-reduction Techniques for Efficient Simulation](resources/papers/hyperreduction_paper.pdf) 

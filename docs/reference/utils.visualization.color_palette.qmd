@@ -1,0 +1,41 @@
+# utils.visualization.color_palette { #skrom.utils.visualization.color_palette }
+
+`utils.visualization.color_palette`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [set_color_palette](#skrom.utils.visualization.color_palette.set_color_palette) | Set a custom color palette for Matplotlib plots. |
+
+### set_color_palette { #skrom.utils.visualization.color_palette.set_color_palette }
+
+```python
+utils.visualization.color_palette.set_color_palette()
+```
+
+Set a custom color palette for Matplotlib plots.
+
+Defines and applies a predefined list of hexadecimal color codes to Matplotlib's
+``axes.prop_cycle``, ensuring a consistent sequence of colors for plot elements.
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type        | Description                                                           |
+|--------|-------------|-----------------------------------------------------------------------|
+| colors | list of str | A list of hexadecimal color strings representing the palette applied. |
+
+#### Notes {.doc-section .doc-section-notes}
+
+- The palette consists of 19 distinct colors chosen for clarity and visual appeal.
+- Applying this palette affects all subsequent plots in the current session.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> colors = set_color_palette()
+>>> plt.plot([0, 1, 2], [10, 20, 15])  # uses the first color in the returned palette
+>>> plt.scatter([1, 2, 3], [5, 10, 20])  # uses the next color in the cycle
+```

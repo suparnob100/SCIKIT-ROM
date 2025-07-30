@@ -1,0 +1,147 @@
+# hyperreduction.ecsw.custom_nnls { #skrom.hyperreduction.ecsw.custom_nnls }
+
+`hyperreduction.ecsw.custom_nnls`
+
+Implements bounded non-negative least squares (NNLS) for Empirical Cubature Subset Weighting (ECSW).
+
+This module provides:
+  - `NNLS_termination`: enumeration of L2 and L∞ convergence criteria for NNLS.
+  - `_verify`: internal helper to assert solver invariants.
+  - `NNLSSolver`: a sequential active-set NNLS solver with per-entry bounds, selectable norms,
+    stall-detection, and verbosity controls.
+
+The `ecsw` folder contains utilities for Empirical Cubature Subset Weighting, including:
+  - Algorithms to compute cubature weights using bounded NNLS.
+  - Selection and pruning of integration points via active-set methods.
+  - Support functions for convergence criteria and solver configuration.
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [NNLSSolver](#skrom.hyperreduction.ecsw.custom_nnls.NNLSSolver) | Sequential bounded NNLS (non-negative least squares) solver. |
+| [NNLS_termination](#skrom.hyperreduction.ecsw.custom_nnls.NNLS_termination) | Termination criteria for the NNLS solver. |
+
+### NNLSSolver { #skrom.hyperreduction.ecsw.custom_nnls.NNLSSolver }
+
+```python
+hyperreduction.ecsw.custom_nnls.NNLSSolver(
+    const_tol=1e-06,
+    min_nnz=1,
+    max_nnz=0,
+    verbosity=1,
+    res_change_termination_tol=1e-10,
+    zero_tol=1e-15,
+    n_outer=1000,
+    n_inner=400,
+    criterion=NNLS_termination.LINF,
+)
+```
+
+Sequential bounded NNLS (non-negative least squares) solver.
+
+Implements an active-set method for finding x ≥ 0 that approximately satisfies
+A x ≈ b, with per-entry bounds on b and two convergence tests (L₂‐ and L∞‐norm).
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name                       | Type                                         | Description                                                                                                                                                              | Default               |
+|----------------------------|----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|
+| const_tol                  | float                                        | Tolerance for constraint violation in the L∞‐criterion (default: 1e-6).                                                                                                  | `1e-06`               |
+| min_nnz                    | int                                          | Minimum number of nonzeros required in the solution before stopping (default: 1).                                                                                        | `1`                   |
+| max_nnz                    | int                                          | Maximum allowed number of nonzeros in the solution.  A value of 0 means “no limit” and will be set to the number of columns of A on the first `solve` call (default: 0). | `0`                   |
+| verbosity                  | int                                          | Print level (0: silent, 1: summary only, ≥2: detailed per‐iteration logging) (default: 1).                                                                               | `1`                   |
+| res_change_termination_tol | float                                        | If the relative change in the mean residual over 50 iterations falls below this threshold, the solver will deem itself stalled (default: 1e-10).                         | `1e-10`               |
+| zero_tol                   | float                                        | Threshold below which computed subproblem entries are considered zero (default: 1e-15).                                                                                  | `1e-15`               |
+| n_outer                    | int                                          | Maximum number of outer (active‐set) iterations (default: 1000).                                                                                                         | `1000`                |
+| n_inner                    | int                                          | Maximum number of inner (subproblem) iterations per active set (default: 400).                                                                                           | `400`                 |
+| criterion                  | (NNLS_termination.L2, NNLS_termination.LINF) | Which norm to use for stopping test: L2 uses ‖r‖₂ ≤ ‖gap‖₂, L∞ uses max_violation ≤ const_tol  (default: L∞).                                                            | `NNLS_termination.L2` |
+
+#### Attributes {.doc-section .doc-section-attributes}
+
+| Name                        | Type             | Description                                 |
+|-----------------------------|------------------|---------------------------------------------|
+| const_tol_                  | float            | As given by `const_tol`.                    |
+| min_nnz_                    | int              | As given by `min_nnz`.                      |
+| max_nnz_                    | int              | As given by `max_nnz` or set at solve‐time. |
+| verbosity_                  | int              | As given by `verbosity`.                    |
+| res_change_termination_tol_ | float            | As given by `res_change_termination_tol`.   |
+| zero_tol_                   | float            | As given by `zero_tol`.                     |
+| n_outer_                    | int              | As given by `n_outer`.                      |
+| n_inner_                    | int              | As given by `n_inner`.                      |
+| d_criterion                 | NNLS_termination | As given by `criterion`.                    |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> from nnls_solver import NNLSSolver, NNLS_termination
+>>> import numpy as np
+>>> A = np.random.rand(20, 10)
+>>> const_tol_ = 1e-3
+>>> lb = b - const_tol_
+>>> ub = b + const_tol_
+>>> solver = NNLSSolver(const_tol=const_tol_, verbosity=2)
+>>> x, flag = solver.solve(A, lb, ub)
+>>> print("Exit flag:", flag)
+```
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [set_verbosity](#skrom.hyperreduction.ecsw.custom_nnls.NNLSSolver.set_verbosity) | Set the verbosity level. |
+| [solve](#skrom.hyperreduction.ecsw.custom_nnls.NNLSSolver.solve) | Solve A x ≈ b with 0 ≤ x and b∈[rhs_lb, rhs_ub] by active‐set NNLS. |
+
+##### set_verbosity { #skrom.hyperreduction.ecsw.custom_nnls.NNLSSolver.set_verbosity }
+
+```python
+hyperreduction.ecsw.custom_nnls.NNLSSolver.set_verbosity(verbosity_in)
+```
+
+Set the verbosity level.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name         | Type   | Description                                              | Default    |
+|--------------|--------|----------------------------------------------------------|------------|
+| verbosity_in | int    | New verbosity level (0: silent, larger for more output). | _required_ |
+
+##### solve { #skrom.hyperreduction.ecsw.custom_nnls.NNLSSolver.solve }
+
+```python
+hyperreduction.ecsw.custom_nnls.NNLSSolver.solve(mat, rhs_lb, rhs_ub)
+```
+
+Solve A x ≈ b with 0 ≤ x and b∈[rhs_lb, rhs_ub] by active‐set NNLS.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type                      | Description                  | Default    |
+|--------|---------------------------|------------------------------|------------|
+| mat    | (array_like, shape(m, n)) | Left‐hand‐side matrix A.     | _required_ |
+| rhs_lb | (array_like, shape(m))    | Per‐entry lower bounds on b. | _required_ |
+| rhs_ub | (array_like, shape(m))    | Per‐entry upper bounds on b. | _required_ |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name       | Type                | Description                                                                                                                                                                                |
+|------------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| final_soln | (ndarray, shape(n)) | Computed nonnegative solution.                                                                                                                                                             |
+| exit_flag  | int                 | Status code:   - 0: converged successfully   - 1: maximum outer iterations reached   - 2: stalled (no significant residual change)   - 3: other failure (e.g., subproblem failure or M≤N). |
+
+### NNLS_termination { #skrom.hyperreduction.ecsw.custom_nnls.NNLS_termination }
+
+```python
+hyperreduction.ecsw.custom_nnls.NNLS_termination()
+```
+
+Termination criteria for the NNLS solver.
+
+Enumeration of the two supported norms used to decide convergence.
+
+#### Attributes {.doc-section .doc-section-attributes}
+
+| Name   | Type   | Description                                                                                                                   |
+|--------|--------|-------------------------------------------------------------------------------------------------------------------------------|
+| L2     | int    | Use the L₂-norm of the residual (‖r‖₂) compared against the half-gap norm threshold (‖(rhs_ub – rhs_lb)/2‖₂).                 |
+| LINF   | int    | Use the L∞-norm criterion, i.e. the maximum per-entry violation must be no greater than the absolute tolerance (`const_tol`). |

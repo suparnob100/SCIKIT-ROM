@@ -1,0 +1,19 @@
+# fom { #skrom.fom }
+
+`fom`
+
+## fem_utils.py {.doc-section .doc-section-femutilspy}
+
+Finite‐element utilities for full‐order model (FOM) workflows.
+
+This module provides helpers for:
+  - Mesh‐ and basis‐related operations
+  - Assembly of stiffness/mass matrices and load vectors
+  - Application of boundary conditions and integration routines
+
+The `fom` folder contains everything needed to build and solve
+full‐order PDE models, including:
+  - Mesh management and basis function definitions
+  - System assembly routines (matrices, RHS)
+  - Solver interfaces and preconditioners
+  - Diagnostic and post‐processing tools

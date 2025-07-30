@@ -1,0 +1,207 @@
+# problem_classes.master_class_static { #skrom.problem_classes.master_class_static }
+
+`problem_classes.master_class_static`
+
+Module for static reduced-order modeling (ROM):
+
+- Dynamic import of problem definitions
+- Full-order FEM solver (FOM)
+- Offline snapshot generator
+- Online ROM evaluator
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [Problem](#skrom.problem_classes.master_class_static.Problem) | Abstract base for conductivity problems under affine decomposition. |
+| [fom_simulation](#skrom.problem_classes.master_class_static.fom_simulation) | Offline snapshot generator using full-order FEM. |
+| [rom_simulation](#skrom.problem_classes.master_class_static.rom_simulation) | Plain Galerkin ROM evaluator with error and speed-up metrics. |
+
+### Problem { #skrom.problem_classes.master_class_static.Problem }
+
+```python
+problem_classes.master_class_static.Problem()
+```
+
+Abstract base for conductivity problems under affine decomposition.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [bilinear_forms](#skrom.problem_classes.master_class_static.Problem.bilinear_forms) | Return affine bilinear form components. |
+| [domain](#skrom.problem_classes.master_class_static.Problem.domain) | Return geometry and FEM bases. |
+| [fom_solver](#skrom.problem_classes.master_class_static.Problem.fom_solver) | Solve full-order FEM system for given parameters. |
+| [hyper_rom_solver](#skrom.problem_classes.master_class_static.Problem.hyper_rom_solver) | Solve hyper-reduced-order model for given parameters. |
+| [linear_forms](#skrom.problem_classes.master_class_static.Problem.linear_forms) | Return affine linear form components. |
+| [parameters](#skrom.problem_classes.master_class_static.Problem.parameters) | Generate sampling of parameter space. |
+| [properties](#skrom.problem_classes.master_class_static.Problem.properties) | Return function to compute parameter-dependent coefficients. |
+| [rom_solver](#skrom.problem_classes.master_class_static.Problem.rom_solver) | Solve reduced-order model for given parameters. |
+
+##### bilinear_forms { #skrom.problem_classes.master_class_static.Problem.bilinear_forms }
+
+```python
+problem_classes.master_class_static.Problem.bilinear_forms()
+```
+
+Return affine bilinear form components.
+
+##### domain { #skrom.problem_classes.master_class_static.Problem.domain }
+
+```python
+problem_classes.master_class_static.Problem.domain()
+```
+
+Return geometry and FEM bases.
+
+##### fom_solver { #skrom.problem_classes.master_class_static.Problem.fom_solver }
+
+```python
+problem_classes.master_class_static.Problem.fom_solver()
+```
+
+Solve full-order FEM system for given parameters.
+
+##### hyper_rom_solver { #skrom.problem_classes.master_class_static.Problem.hyper_rom_solver }
+
+```python
+problem_classes.master_class_static.Problem.hyper_rom_solver()
+```
+
+Solve hyper-reduced-order model for given parameters.
+
+##### linear_forms { #skrom.problem_classes.master_class_static.Problem.linear_forms }
+
+```python
+problem_classes.master_class_static.Problem.linear_forms()
+```
+
+Return affine linear form components.
+
+##### parameters { #skrom.problem_classes.master_class_static.Problem.parameters }
+
+```python
+problem_classes.master_class_static.Problem.parameters()
+```
+
+Generate sampling of parameter space.
+
+##### properties { #skrom.problem_classes.master_class_static.Problem.properties }
+
+```python
+problem_classes.master_class_static.Problem.properties()
+```
+
+Return function to compute parameter-dependent coefficients.
+
+##### rom_solver { #skrom.problem_classes.master_class_static.Problem.rom_solver }
+
+```python
+problem_classes.master_class_static.Problem.rom_solver()
+```
+
+Solve reduced-order model for given parameters.
+
+### fom_simulation { #skrom.problem_classes.master_class_static.fom_simulation }
+
+```python
+problem_classes.master_class_static.fom_simulation(num_snapshots=32)
+```
+
+Offline snapshot generator using full-order FEM.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [run_simulation](#skrom.problem_classes.master_class_static.fom_simulation.run_simulation) | Generate snapshots and record timings. |
+
+##### run_simulation { #skrom.problem_classes.master_class_static.fom_simulation.run_simulation }
+
+```python
+problem_classes.master_class_static.fom_simulation.run_simulation()
+```
+
+Generate snapshots and record timings.
+
+### rom_simulation { #skrom.problem_classes.master_class_static.rom_simulation }
+
+```python
+problem_classes.master_class_static.rom_simulation(
+    mean=None,
+    fos_solutions=None,
+    train_mask=None,
+    test_mask=None,
+    V_sel=None,
+    n_sel=None,
+    N_rom_snap=None,
+)
+```
+
+Plain Galerkin ROM evaluator with error and speed-up metrics.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [run_hyper_rom_simulation](#skrom.problem_classes.master_class_static.rom_simulation.run_hyper_rom_simulation) | Execute hyper-ROM solves, compute error percentages and speed-ups. |
+| [run_rom_simulation](#skrom.problem_classes.master_class_static.rom_simulation.run_rom_simulation) | Execute ROM solves, compute error percentages and speed-ups. |
+
+##### run_hyper_rom_simulation { #skrom.problem_classes.master_class_static.rom_simulation.run_hyper_rom_simulation }
+
+```python
+problem_classes.master_class_static.rom_simulation.run_hyper_rom_simulation(z)
+```
+
+Execute hyper-ROM solves, compute error percentages and speed-ups.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type       | Description                                               | Default    |
+|--------|------------|-----------------------------------------------------------|------------|
+| z      | array_like | Weight vector for hyper-reduction (stored for reference). | _required_ |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name            | Type          | Description                       |
+|-----------------|---------------|-----------------------------------|
+| hyper_rom_error | list of float | Percent error per snapshot.       |
+| hyper_speed_up  | list of float | Full/FOM time ratio per snapshot. |
+
+##### run_rom_simulation { #skrom.problem_classes.master_class_static.rom_simulation.run_rom_simulation }
+
+```python
+problem_classes.master_class_static.rom_simulation.run_rom_simulation()
+```
+
+Execute ROM solves, compute error percentages and speed-ups.
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name      | Type          | Description                       |
+|-----------|---------------|-----------------------------------|
+| rom_error | list of float | Percent error per snapshot.       |
+| speed_up  | list of float | Full/ROM time ratio per snapshot. |
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [get_problem](#skrom.problem_classes.master_class_static.get_problem) | Instantiate a registered problem by name. |
+| [register_problem](#skrom.problem_classes.master_class_static.register_problem) | Decorator to register a problem class under a given name. |
+
+### get_problem { #skrom.problem_classes.master_class_static.get_problem }
+
+```python
+problem_classes.master_class_static.get_problem(name)
+```
+
+Instantiate a registered problem by name.
+
+### register_problem { #skrom.problem_classes.master_class_static.register_problem }
+
+```python
+problem_classes.master_class_static.register_problem(name)
+```
+
+Decorator to register a problem class under a given name.

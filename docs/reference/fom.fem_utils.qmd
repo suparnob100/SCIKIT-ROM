@@ -1,0 +1,128 @@
+# fom.fem_utils { #skrom.fom.fem_utils }
+
+`fom.fem_utils`
+
+This module includes:
+
+- `build_pc_amgsa`: construct AMG smoothed aggregation preconditioner.
+
+- `element2location`: generate element-to-coordinate mappings from mesh data.
+
+- `newton_solver` and its helpers: perform Newton–Raphson solves with or without Dirichlet BC.
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [build_pc_amgsa](#skrom.fom.fem_utils.build_pc_amgsa) | Build an algebraic multigrid smoothed aggregation preconditioner. |
+| [compute_basis_regions](#skrom.fom.fem_utils.compute_basis_regions) | Given a dict mapping region names to boolean element‐masks, |
+| [element2location](#skrom.fom.fem_utils.element2location) | Map mesh elements to their spatial coordinates. |
+| [load_mesh_and_basis](#skrom.fom.fem_utils.load_mesh_and_basis) | Call domain() and assign just mesh and basis onto self. |
+| [newton_solver](#skrom.fom.fem_utils.newton_solver) | Solve a nonlinear system using the Newton–Raphson method with optional Dirichlet boundary conditions. |
+| [unwrap_attr](#skrom.fom.fem_utils.unwrap_attr) | If self.<attr_name> is a 0-d object ndarray, replace it with its .item(). |
+
+### build_pc_amgsa { #skrom.fom.fem_utils.build_pc_amgsa }
+
+```python
+fom.fem_utils.build_pc_amgsa(A, **kwargs)
+```
+
+Build an algebraic multigrid smoothed aggregation preconditioner.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type                              | Description                                                               | Default    |
+|----------|-----------------------------------|---------------------------------------------------------------------------|------------|
+| A        | scipy.sparse matrix or array_like | The system matrix for which the preconditioner is constructed.            | _required_ |
+| **kwargs |                                   | Additional keyword arguments passed to pyamg.smoothed_aggregation_solver. | `{}`       |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                               | Description                                                                    |
+|--------|------------------------------------|--------------------------------------------------------------------------------|
+| M      | scipy.sparse.linalg.LinearOperator | The preconditioner as a linear operator suitable for use in iterative solvers. |
+
+### compute_basis_regions { #skrom.fom.fem_utils.compute_basis_regions }
+
+```python
+fom.fem_utils.compute_basis_regions(basis, masks)
+```
+
+Given a dict mapping region names to boolean element‐masks,
+returns a dict of reduced bases for each region.
+
+### element2location { #skrom.fom.fem_utils.element2location }
+
+```python
+fom.fem_utils.element2location(mesh)
+```
+
+Map mesh elements to their spatial coordinates.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type   | Description                                                                        | Default    |
+|--------|--------|------------------------------------------------------------------------------------|------------|
+| mesh   | object | Mesh object with attributes `p` (node coordinates) and `t` (element connectivity). | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name           | Type                                         | Description                                                                                                                            |
+|----------------|----------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| element_coords | ndarray of shape (n_elements, n_local_nodes) | Array of element coordinates, where each row corresponds to an element and each column corresponds to a local node within the element. |
+
+### load_mesh_and_basis { #skrom.fom.fem_utils.load_mesh_and_basis }
+
+```python
+fom.fem_utils.load_mesh_and_basis(instance)
+```
+
+Call domain() and assign just mesh and basis onto self.
+
+### newton_solver { #skrom.fom.fem_utils.newton_solver }
+
+```python
+fom.fem_utils.newton_solver(
+    assemble_fn,
+    u0,
+    dirichlet_dofs=None,
+    dirichlet_vals=None,
+    *assemble_args,
+    tol=0.01,
+    maxit=50,
+)
+```
+
+Solve a nonlinear system using the Newton–Raphson method with optional Dirichlet boundary conditions.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name           | Type              | Description                                                                                                                             | Default    |
+|----------------|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------|------------|
+| assemble_fn    | callable          | Function that assembles the system. Should return either (RHS, J) for functions with dirichlet BC or (J, RHS) for no-dirichlet variant. | _required_ |
+| u0             | ndarray           | Initial guess for the solution vector.                                                                                                  | _required_ |
+| dirichlet_dofs | array_like of int | Indices of degrees of freedom with prescribed Dirichlet boundary conditions. If None or empty, no Dirichlet BC are applied.             | `None`     |
+| dirichlet_vals | ndarray           | Values at the Dirichlet DOFs.                                                                                                           | `None`     |
+| *assemble_args |                   | Additional positional arguments passed to `assemble_fn`.                                                                                | `()`       |
+| tol            | float             | Tolerance for convergence based on the norm of the update.                                                                              | `1e-2`     |
+| maxit          | int               | Maximum number of Newton iterations.                                                                                                    | `50`       |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type    | Description                                    |
+|--------|---------|------------------------------------------------|
+| u      | ndarray | Approximate solution vector after convergence. |
+
+#### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type         | Description                                                |
+|--------|--------------|------------------------------------------------------------|
+|        | RuntimeError | If the solver fails to converge within `maxit` iterations. |
+
+### unwrap_attr { #skrom.fom.fem_utils.unwrap_attr }
+
+```python
+fom.fem_utils.unwrap_attr(instance, attr_name)
+```
+
+If self.<attr_name> is a 0-d object ndarray, replace it with its .item().

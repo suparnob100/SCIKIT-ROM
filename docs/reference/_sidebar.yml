@@ -1,0 +1,42 @@
+website:
+  sidebar:
+  - contents:
+    - reference/index.qmd
+    - contents:
+      - reference/problem_classes.qmd
+      - reference/problem_classes.master_class_static.qmd
+      section: Problem Classes
+    - contents:
+      - reference/fom.qmd
+      - reference/fom.fem_utils.qmd
+      section: Full-Order Model (FOM)
+    - contents:
+      - reference/rom.qmd
+      - reference/rom.bilinear_form_rom.qmd
+      - reference/rom.linear_form_rom.qmd
+      - reference/rom.rom_error_est.qmd
+      - reference/rom.rom_utils.qmd
+      - reference/rom.linear_form_hyperrom.qmd
+      section: Reduced-Order Model (ROM)
+    - contents:
+      - reference/rom.ecsw.qmd
+      - reference/rom.ecsw.custom_nnls.qmd
+      - reference/rom.ecsw.hyperreduce.qmd
+      section: ECSW
+    - contents:
+      - reference/utils.qmd
+      - reference/utils.imports.qmd
+      - reference/utils.old.qmd
+      - reference/utils.old.rom_utils_old.qmd
+      - reference/utils.reduced_basis.qmd
+      - reference/utils.reduced_basis.svd.qmd
+      section: Utilities
+    - contents:
+      - reference/utils.visualization.qmd
+      - reference/utils.visualization.generate_vtk.qmd
+      - reference/utils.visualization.generate_vtu.qmd
+      - reference/utils.visualization.vtuwriter.qmd
+      - reference/utils.visualization.color_palette.qmd
+      section: Visualization
+    id: reference
+  - id: dummy-sidebar
