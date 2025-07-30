@@ -14,6 +14,8 @@ def newmark_with_damping(M,          # mass matrix
     Newmark-β integrator with Rayleigh damping C.
     Uses copies of input matrices to avoid side effects.
     force_free(i, times) must return the load vector at times[i].
+
+    [Code: Suparno Bhattacharyya]
     """
     # Ensure we work on fresh copies
     M_mat = M.copy() if hasattr(M, 'copy') else sp.csr_matrix(M)

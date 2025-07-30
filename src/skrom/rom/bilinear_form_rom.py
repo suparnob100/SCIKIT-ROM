@@ -12,6 +12,8 @@ The `rom` folder contains core tools for reduced-order modeling (ROM), including
   - Utilities for handling Dirichlet boundary conditions in reduced spaces
   - Chunked and clustered assembly routines to manage large-scale stiffness/load data
   - Mapping utilities between full-order and reduced-order degrees of freedom
+
+  [Author: Suparno Bhattacharyya]
 """
 from typing import Optional
 from threading import Thread

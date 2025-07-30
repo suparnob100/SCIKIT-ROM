@@ -3,6 +3,8 @@ This module includes:
 - `build_pc_amgsa`: construct AMG smoothed aggregation preconditioner.
 - `element2location`: generate element-to-coordinate mappings from mesh data.
 - `newton_solver` and its helpers: perform Newton–Raphson solves with or without Dirichlet BC.
+
+[Author: Suparno Bhattacharyya]
 """
 import numpy as np
 from skrom.utils.imports import *

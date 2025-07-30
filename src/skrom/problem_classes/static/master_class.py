@@ -5,6 +5,8 @@ Module for static reduced-order modeling (ROM):
 - Full-order FEM solver (FOM)
 - Offline snapshot generator
 - Online ROM evaluator
+
+[Authors: Suparno Bhattacharyya, Ali Hamza Abidi Syed]
 """
 
 from pathlib import Path

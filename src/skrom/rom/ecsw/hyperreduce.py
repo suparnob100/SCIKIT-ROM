@@ -23,7 +23,9 @@ Usage example:
 ```python
 from hyperreduce.hyperreduce import hyperreduce
 x, flag = hyperreduce(qoi_data, n_components=100, svd=True)
-```  
+```
+
+[Code: Suparno Bhattacharyya]
 """
 import numpy as np
 from sklearn.utils.extmath import randomized_svd

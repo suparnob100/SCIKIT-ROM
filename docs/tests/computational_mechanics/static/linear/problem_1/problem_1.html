@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Linear Hyperelasticity with full order and reduced order simulation</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../../../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../../../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../../../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../../../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../../../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../../../../">
+<script src="../../../../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../../../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../../../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../../../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../../../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../../../../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../../../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../../../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../../../../site_libs/bootstrap/bootstrap-991b1886d3c685c7aa2b62b80640c7af.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../../../../reference/_styles-quartodoc.css">
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-search-results"></div>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Linear Hyperelasticity with full order and reduced order simulation</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="environment-setup" class="level2">
+<h2 class="anchored" data-anchor-id="environment-setup">Environment Setup</h2>
+<section id="directory" class="level3">
+<h3 class="anchored" data-anchor-id="directory">Directory</h3>
+<div id="38c2e683" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> importlib</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># -----------------------------------------------------------------------------</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Project-root auto-detection script</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensures the top-level directory (containing 'src/' and 'tests/')</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># is on Python's import path, allowing modules to be imported consistently</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># regardless of the current working directory (e.g., in notebooks).</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># -----------------------------------------------------------------------------</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 1) Start from the current working directory (or notebook location)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>notebook_path <span class="op">=</span> Path().resolve()</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>linear_dir <span class="op">=</span> notebook_path.parent     <span class="co"># .../linear</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 2) Traverse upward through parent directories to find the project root</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> parent <span class="kw">in</span> notebook_path.parents:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Check for indicators of the project's root structure</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (parent <span class="op">/</span> <span class="st">"src"</span>).exists() <span class="kw">and</span> (parent <span class="op">/</span> <span class="st">"tests"</span>).exists():</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        project_root <span class="op">=</span> parent</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># If loop completes without break, no valid root was found</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">RuntimeError</span>(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Could not find project root containing 'src' and 'tests'"</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># 3) Prepend the detected root to sys.path to prioritize local modules</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(project_root))</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">str</span>(linear_dir) <span class="kw">not</span> <span class="kw">in</span> sys.path:</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(linear_dir))</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 4) Confirm successful addition (optional print for debugging)</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Project root added to sys.path:"</span>, project_root)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Project root added to sys.path: /Users/syedabidi/Documents/GitHub/scikit-rom</code></pre>
+</div>
+</div>
+</section>
+<section id="standard-imports" class="level3">
+<h3 class="anchored" data-anchor-id="standard-imports">Standard Imports</h3>
+<div id="b9b260d4" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.skrom.utils.imports <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.skrom.rom.rom_utils <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.skrom.utils.reduced_basis.svd <span class="im">import</span> svd_mode_selector</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.skrom.rom.rom_error_est <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> src.skrom.problem_classes.master_class_static <span class="im">as</span> master</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.skrom.utils.visualization.generate_vtk <span class="im">import</span> generate_vtk</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>importlib.import_module(<span class="st">"problem_1.problem_def"</span>)   <span class="co"># this runs @register_problem</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<pre><code>&lt;module 'problem_1.problem_def' from '/Users/syedabidi/Documents/GitHub/scikit-rom/tests/computational_mechanics/static/linear/problem_1/problem_def.py'&gt;</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="full-order-simulation" class="level2">
+<h2 class="anchored" data-anchor-id="full-order-simulation">Full Order Simulation</h2>
+<div id="f3bf25ac" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>generate <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> generate:</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    sim <span class="op">=</span> master.fom_simulation()</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    sim.run_simulation()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Snap 1/64 params=[2.98923888 0.34176235]
+Snap 2/64 params=[7.89393038 0.26502588]
+Snap 3/64 params=[7.00008046 0.39671218]
+Snap 4/64 params=[2.09477726 0.22306409]
+Snap 5/64 params=[0.64993389 0.35137637]
+Snap 6/64 params=[5.86677969 0.23089603]
+Snap 7/64 params=[9.33938307 0.31210032]
+Snap 8/64 params=[4.12193035 0.28218395]
+Snap 9/64 params=[4.79779254 0.37897256]
+Snap 10/64 params=[9.85370579 0.20262064]
+Snap 11/64 params=[5.21105571 0.33411771]
+Snap 12/64 params=[0.15453553 0.26085416]
+Snap 13/64 params=[1.522216   0.31377592]
+Snap 14/64 params=[6.26526924 0.29369228]
+Snap 15/64 params=[8.48663463 0.37430455]
+Snap 16/64 params=[3.7429697  0.24478488]
+Snap 17/64 params=[3.3501329  0.36670379]
+Snap 18/64 params=[8.25447169 0.23998563]
+Snap 19/64 params=[6.65871784 0.32177569]
+Snap 20/64 params=[1.75376765 0.29809709]
+Snap 21/64 params=[0.38669635 0.32643684]
+Snap 22/64 params=[5.60389515 0.25593819]
+Snap 23/64 params=[9.62215201 0.38703872]
+Snap 24/64 params=[4.40434658 0.20715286]
+Snap 25/64 params=[3.8903766  0.30390752]
+Snap 26/64 params=[8.94593715 0.27758612]
+Snap 27/64 params=[6.09894054 0.35917474]
+Snap 28/64 params=[1.04277337 0.23589288]
+Snap 29/64 params=[2.4882259 0.3888421]
+Snap 30/64 params=[7.23163215 0.21872795]
+Snap 31/64 params=[7.50109362 0.34924867]
+Snap 32/64 params=[2.75707598 0.26974731]
+Snap 33/64 params=[6.96921779 0.34185052]
+Snap 34/64 params=[4.72543476 0.20159383]
+Snap 35/64 params=[1.45447157 0.35923454]
+Snap 36/64 params=[9.36247505 0.29710133]
+Snap 37/64 params=[8.46827627 0.37646658]
+Snap 38/64 params=[0.71660922 0.26756365]
+Snap 39/64 params=[3.10985765 0.32471002]
+Snap 40/64 params=[5.19732452 0.23143057]
+Snap 41/64 params=[5.98708861 0.36298543]
+Snap 42/64 params=[3.2747025  0.28048326]
+Snap 43/64 params=[0.54955168 0.3366195 ]
+Snap 44/64 params=[7.67584233 0.2197408 ]
+Snap 45/64 params=[9.52701501 0.30385154]
+Snap 46/64 params=[2.24454052 0.24020312]
+Snap 47/64 params=[3.93330545 0.39584494]
+Snap 48/64 params=[6.80185513 0.26032   ]
+Snap 49/64 params=[6.46599366 0.38923725]
+Snap 50/64 params=[4.33935522 0.25440239]
+Snap 51/64 params=[1.98531651 0.30974475]
+Snap 52/64 params=[9.69773569 0.24678641]
+Snap 53/64 params=[8.09193373 0.32990799]
+Snap 54/64 params=[0.22317931 0.21392689]
+Snap 55/64 params=[3.45493158 0.36877491]
+Snap 56/64 params=[5.73788738 0.28717034]
+Snap 57/64 params=[5.57281845 0.31813891]
+Snap 58/64 params=[2.66539165 0.22552512]
+Snap 59/64 params=[1.01554199 0.38239645]
+Snap 60/64 params=[8.25906306 0.27415919]
+Snap 61/64 params=[8.90789082 0.3525597 ]
+Snap 62/64 params=[1.8205524  0.29129967]
+Snap 63/64 params=[4.50678915 0.34767658]
+Snap 64/64 params=[7.25805119 0.20829307]
+Saved full-order solution → fos_solutions.npy
+Saved ROM data             → ROM_simulation_data.npz</code></pre>
+</div>
+</div>
+<section id="load-simulation-data" class="level3">
+<h3 class="anchored" data-anchor-id="load-simulation-data">Load Simulation data</h3>
+<div id="13b0a789" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Load the ROM_data</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>current_dir <span class="op">=</span> Path().resolve()</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>rom_dir <span class="op">=</span> current_dir <span class="op">/</span> <span class="st">"ROM_data"</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>fos_solutions, sim_data <span class="op">=</span> load_rom_data(<span class="va">self</span><span class="op">=</span><span class="va">None</span>, rom_data_dir<span class="op">=</span>rom_dir)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[load_rom_data] loaded from /Users/syedabidi/Documents/GitHub/scikit-rom/tests/computational_mechanics/static/linear/problem_1/ROM_data</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="data-generation" class="level2">
+<h2 class="anchored" data-anchor-id="data-generation">Data Generation</h2>
+<section id="generate-training-solution-dataset" class="level3">
+<h3 class="anchored" data-anchor-id="generate-training-solution-dataset">Generate Training Solution Dataset</h3>
+<div id="5261730e" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert parameter list to a NumPy array (representing system parameters)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This contains the parameter values for each simulation run (e.g., thermal conductivity, </span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co"># boundary conditions, material properties, etc.)</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>param_list <span class="op">=</span> np.asarray(sim_data[<span class="st">'param_list'</span>])</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Load non-linear solutions from the full-order system</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># NLS contains the high-fidelity finite element solutions for each parameter set</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Each row represents a complete solution snapshot (discretized spatial field)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>LS <span class="op">=</span> np.asarray(fos_solutions)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Split data into training and testing using predefined masks</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co"># These boolean masks determine which snapshots are used for ROM training vs validation</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>train_mask, test_mask <span class="op">=</span> sim_data[<span class="st">'train_mask'</span>], sim_data[<span class="st">'test_mask'</span>]</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply masks to filter non-linear solutions for training and testing</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Training set: Used to construct the ROM basis functions and train the model</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>LS_train <span class="op">=</span> LS[train_mask]  <span class="co"># Training snapshots with Dirichlet boundary conditions applied</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Testing set: Used to evaluate ROM accuracy and performance on unseen data</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>LS_test <span class="op">=</span> LS[test_mask]    <span class="co"># Testing snapshots with Dirichlet boundary conditions applied</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the number of snapshots (parameter samples or time instances)</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co"># N_snap: Total number of simulation snapshots available</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="co"># Second dimension: Number of degrees of freedom (DOFs) in the spatial discretization</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>N_snap, _ <span class="op">=</span> np.shape(LS)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the total number of snapshots for verification</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(N_snap)  <span class="co"># Print the number of snapshots available</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>64</code></pre>
+</div>
+</div>
+</section>
+<section id="mean-subtraction" class="level3">
+<h3 class="anchored" data-anchor-id="mean-subtraction">Mean Subtraction</h3>
+<div id="6bdc51e9" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute the mean temperature field across all training snapshots</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This represents the "average" or "reference" temperature distribution</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Shape: [N_dof] - one mean value for each spatial degree of freedom</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>LS_train_mean <span class="op">=</span> np.mean(LS_train,axis <span class="op">=</span> <span class="dv">0</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Mean-center the training data by subtracting the mean field</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># This creates fluctuations/deviations from the mean temperature distribution</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Shape: [N_train_snapshots, N_dof] - same as original but now mean-centered</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Each row now represents how much each snapshot deviates from the average</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>LS_train_ms <span class="op">=</span> LS_train <span class="op">-</span> LS_train_mean</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co">#We will use SVD on the mean subtracted matrix data</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="vizualize-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="vizualize-parameters">Vizualize Parameters</h3>
+<div id="206b423b" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualize the parameter space distribution for training and testing data</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot training parameter combinations (first 16 samples)</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract first and second parameter columns for 2D visualization</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>plt.scatter(param_list[:<span class="dv">16</span>][:, <span class="dv">0</span>],    <span class="co"># First parameter (μ) for training samples which are the k_params </span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>           param_list[:<span class="dv">16</span>][:, <span class="dv">1</span>],     <span class="co"># Second parameter (β) for training samples which are the q_params</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>           s<span class="op">=</span><span class="dv">50</span>,                      <span class="co"># Marker size</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>           c<span class="op">=</span><span class="st">'#163e64'</span>,              <span class="co"># Dark blue color for training points</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>           label<span class="op">=</span><span class="st">"Training"</span>)         <span class="co"># Legend label</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot testing parameter combinations (samples 17 and beyond)</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>plt.scatter(param_list[<span class="dv">16</span>:][:, <span class="dv">0</span>],    <span class="co"># First parameter (μ) for testing samples</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>           param_list[<span class="dv">16</span>:][:, <span class="dv">1</span>],     <span class="co"># Second parameter (β) for testing samples</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>           s<span class="op">=</span><span class="dv">50</span>,                      <span class="co"># Marker size (same as training)</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>           c<span class="op">=</span><span class="st">'#e97132'</span>,              <span class="co"># Orange color for testing points</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>           label<span class="op">=</span><span class="st">"Testing"</span>)          <span class="co"># Legend label</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Set axis labels using LaTeX formatting for mathematical notation</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"$</span><span class="ch">\\</span><span class="st">mu$"</span>)        <span class="co"># First parameter (often material property, conductivity, etc.) this is the k_params</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"$</span><span class="ch">\\</span><span class="st">beta$"</span>)     <span class="co"># Second parameter (often boundary condition, heat source, etc.) this is the q_params</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Add legend to distinguish between training and testing sets</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a><span class="co">#See params and properties to see how these are used</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="problem_1_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="performing-svd-on-solution-snapshots" class="level3">
+<h3 class="anchored" data-anchor-id="performing-svd-on-solution-snapshots">Performing SVD on solution snapshots</h3>
+<div id="30bc9fae" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># fig, ax = plt.subplots(figsize=(5,3.5))</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>plt.rcParams[<span class="st">'lines.markersize'</span>] <span class="op">=</span> <span class="dv">6</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>plt.rcParams[<span class="st">'lines.linewidth'</span>] <span class="op">=</span> <span class="fl">2.0</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>n_sel, U <span class="op">=</span> svd_mode_selector(LS_train_ms, tolerance <span class="op">=</span> <span class="fl">1e-4</span>, modes<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>V_sel <span class="op">=</span> U[:, :n_sel]</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'$1-r_</span><span class="sc">{k}</span><span class="st">$'</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'POD modes ($k$)'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of modes selected: 3</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<pre><code>Text(0.5, 0, 'POD modes ($k$)')</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="problem_1_files/figure-html/cell-9-output-3.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="rom-simulation" class="level2">
+<h2 class="anchored" data-anchor-id="rom-simulation">ROM Simulation</h2>
+<div id="c4c8f50f" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Run ROM simulation here:</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>rom <span class="op">=</span> master.rom_simulation(V_sel <span class="op">=</span> V_sel)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[load_rom_data] loaded from /Users/syedabidi/Documents/GitHub/scikit-rom/tests/computational_mechanics/static/linear/problem_1/ROM_data</code></pre>
+</div>
+</div>
+<div id="999799da" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>rom.run_rom_simulation()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Snap 1/64 params=[6.96921779 0.34185052]
+Snap 2/64 params=[4.72543476 0.20159383]
+Snap 3/64 params=[1.45447157 0.35923454]
+Snap 4/64 params=[9.36247505 0.29710133]
+Snap 5/64 params=[8.46827627 0.37646658]
+Snap 6/64 params=[0.71660922 0.26756365]
+Snap 7/64 params=[3.10985765 0.32471002]
+Snap 8/64 params=[5.19732452 0.23143057]
+Snap 9/64 params=[5.98708861 0.36298543]
+Snap 10/64 params=[3.2747025  0.28048326]
+Snap 11/64 params=[0.54955168 0.3366195 ]
+Snap 12/64 params=[7.67584233 0.2197408 ]
+Snap 13/64 params=[9.52701501 0.30385154]
+Snap 14/64 params=[2.24454052 0.24020312]
+Snap 15/64 params=[3.93330545 0.39584494]
+Snap 16/64 params=[6.80185513 0.26032   ]
+Snap 17/64 params=[6.46599366 0.38923725]
+Snap 18/64 params=[4.33935522 0.25440239]
+Snap 19/64 params=[1.98531651 0.30974475]
+Snap 20/64 params=[9.69773569 0.24678641]
+Snap 21/64 params=[8.09193373 0.32990799]
+Snap 22/64 params=[0.22317931 0.21392689]
+Snap 23/64 params=[3.45493158 0.36877491]
+Snap 24/64 params=[5.73788738 0.28717034]
+Snap 25/64 params=[5.57281845 0.31813891]
+Snap 26/64 params=[2.66539165 0.22552512]
+Snap 27/64 params=[1.01554199 0.38239645]
+Snap 28/64 params=[8.25906306 0.27415919]
+Snap 29/64 params=[8.90789082 0.3525597 ]
+Snap 30/64 params=[1.8205524  0.29129967]
+Snap 31/64 params=[4.50678915 0.34767658]
+Snap 32/64 params=[7.25805119 0.20829307]</code></pre>
+</div>
+</div>
+<div id="031295cd" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Assign values for the statistics</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>LS_rom <span class="op">=</span> np.asarray(rom.rom_solutions)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>ROM_speed_up <span class="op">=</span> rom.speed_up</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>ROM_speed_up<span class="op">=</span>ROM_speed_up[<span class="dv">1</span>:]</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>ROM_relative_error <span class="op">=</span> rom.rom_error</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="rom-solution-vs-full-order-statistics" class="level3">
+<h3 class="anchored" data-anchor-id="rom-solution-vs-full-order-statistics">ROM Solution vs Full order statistics</h3>
+<div id="b2ee732a" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- ROM error analysis ---</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute a flat matrix of error metrics comparing true nonlinear solutions to hyper-ROM approximations</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>matrix <span class="op">=</span> compute_rom_error_metrics_flat(LS_test, LS_rom)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Produce a text-based report summarizing these hyper-ROM error metrics</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>generate_rom_error_report(matrix)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot diagnostic figures: error vs. speed-up for the hyper-reduced ROM</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>plot_rom_error_diagnostics_flat(</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    LS_test,                   <span class="co"># full-order (true) solution snapshots</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    LS_rom,              <span class="co"># hyper-ROM-generated solution snapshots</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    ROM_relative_error,   <span class="co"># precomputed relative error of the hyper-ROM</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    ROM_speed_up,         <span class="co"># precomputed speed-up factor of the hyper-ROM</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    sim_axis<span class="op">=</span>[<span class="st">'True'</span>, <span class="st">'ROM'</span>], </span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    metrics<span class="op">=</span>matrix              <span class="co"># the matrix of error metrics just computed</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>===================
+ROM Accuracy Report
+===================
+
+Global Errors:
+L2 Error:                 6.1336e-04
+Relative L2 Error:        3.6398e-06
+L∞ Error:                 1.8357e-05
+Relative L∞ Error:        5.1428e-06
+RMSE:                     7.7285e-07
+MAE:                      1.9243e-07
+
+Statistical Fit:
+R² Score:                 1.0000
+Explained Variance:       1.0000
+
+Error Distribution:
+Median Error:             1.6347e-14
+95th Percentile Error:    6.5134e-07
+
+Time/Parameter-Dependent Errors:
+Average Rel L2 Error over time/parameter: 3.0968e-06
+Max Rel L2 Error over time/parameter: 2.5584e-05
+Min Rel L2 Error over time/parameter: 9.2842e-08
+――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="problem_1_files/figure-html/cell-13-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>spatial_shape not given → skipping spatial snapshots.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="problem_1_files/figure-html/cell-13-output-4.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="problem_1_files/figure-html/cell-13-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="visualize-on-paraview" class="level2">
+<h2 class="anchored" data-anchor-id="visualize-on-paraview">Visualize on paraview</h2>
+<div id="17620ac0" class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>generate_vtk(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    LS_test,</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    LS_rom,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    sim_data[<span class="st">'mesh'</span>].item(),</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    sim_data[<span class="st">'basis'</span>].item(),</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    scale <span class="op">=</span> <span class="fl">1.0</span>,</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    num_test <span class="op">=</span> <span class="dv">5</span>,</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    out_dir <span class="op">=</span> <span class="st">"sol_vtk_files"</span>,</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

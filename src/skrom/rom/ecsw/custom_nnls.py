@@ -11,6 +11,8 @@ The `ecsw` folder contains utilities for Empirical Cubature Subset Weighting, in
   - Algorithms to compute cubature weights using bounded NNLS.
   - Selection and pruning of integration points via active-set methods.
   - Support functions for convergence criteria and solver configuration.
+  
+  [Original C++ code: libROM team at LLNL, Python adaptation: Suparno Bhattacharyya]
 """
 
 import numpy as np

@@ -12,6 +12,8 @@ This module provides functions to construct SciKit-FEM meshes from parameter fil
 and to convert NumPy solution arrays into VTU series for post-processing and
 visualization. It scans directories for solution data, rebuilds meshes, writes
 VTU snapshots at specified strides, and aggregates them into PVD collection files.
+
+[Author: Suparno Bhattacharyya]
 """
 
 def build_mesh_from_params(p: dict):

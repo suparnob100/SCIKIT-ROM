@@ -43,6 +43,8 @@ def save_vtk_solution(u, mesh, basis, scale, run_dir, prefix, split_dim=False):
     Returns
     -------
     None
+
+    [Author: Suparno Bhattacharyya]
     """
     # extract and scale only the nodal displacements
     u_node = scale * u[basis.nodal_dofs]     # shape (dim, n_nodes)
@@ -135,6 +137,8 @@ def generate_vtk(
     --------
     >>> generate_vtk(LS_test, LS_rom, mesh, basis, scale=0.5, num_test=3,
     ...              out_dir="vtk_outputs", split_dim=True)
+
+    [Author: Suparno Bhattacharyya]
     """
     base_dir = Path(out_dir)
     if base_dir.exists():
@@ -179,6 +183,8 @@ def save_vtk_time_series(
     scale  : displacement scale
     run_dir: output directory
     prefix : file prefix, e.g. "beam"
+
+    [Author: Suparno Bhattacharyya]
     """
     run_dir.mkdir(parents=True, exist_ok=True)
     pvd_file = run_dir / f"{prefix}.pvd"

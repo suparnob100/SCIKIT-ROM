@@ -16,6 +16,7 @@ class LinearFormHYPERROM_deim(LinearForm):
     hyperreduction for finite‐element linear forms. Builds a reduced‐order
     load vector by assembling only a weighted subset of elements and
     reconstructing the full operator via DEIM interpolation.
+    [Author: Suparno Bhattacharyya]
     """
 
     def __init__(self, form, elem_weight, ubasis: Basis, lob,

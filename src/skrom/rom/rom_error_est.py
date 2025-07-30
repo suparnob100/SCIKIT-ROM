@@ -13,6 +13,8 @@ The `rom` folder contains core tools for reduced-order modeling, including:
   - Assembly abstractions for reduced bilinear and linear forms
   - Error evaluation and reporting utilities (this module)
   - Hyper-reduction and cubature integration tools
+
+  [Author: Suparno Bhattacharyya]
 """
 import numpy as np
 import matplotlib.pyplot as plt

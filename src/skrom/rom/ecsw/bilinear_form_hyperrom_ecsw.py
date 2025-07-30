@@ -16,6 +16,8 @@ The `hyperreduce` folder contains all tools for hyper-reduction, including:
   - Routines to extract local element matrices/vectors in the ROM basis
   - Utilities for efficient handling of Dirichlet conditions in reduced spaces
   - Support for element‐wise parallelization and weighted assembly
+  
+  [Author: Suparno Bhattacharyya]
 """
 from typing import Optional
 from threading import Thread

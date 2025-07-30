@@ -1,0 +1,2 @@
+[console_scripts]
+skrom = skrom.cli:cli

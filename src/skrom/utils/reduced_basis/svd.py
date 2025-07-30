@@ -37,6 +37,8 @@ def svd_mode_selector_var(data, tolerance=1e-3, modes=False, **kwargs):
     >>> num_modes, U = svd_mode_selector_var(data_matrix, tolerance=1e-2)
     >>> print(num_modes)
     5
+
+    [Author: Suparno Bhattacharyya]
     """
     data_array = np.asarray(data)
     U, singular_values, _ = np.linalg.svd(data_array.T, full_matrices=False)
@@ -102,6 +104,8 @@ def svd_mode_selector(data, tolerance=1e-3, modes=False, **kwargs):
     >>> num_modes, U = svd_mode_selector(data_matrix, tolerance=1e-2)
     >>> print(num_modes)
     4
+
+    [Author: Suparno Bhattacharyya]
     """
     data_array = np.asarray(data)
     U, singular_values, _ = np.linalg.svd(data_array.T, full_matrices=False)

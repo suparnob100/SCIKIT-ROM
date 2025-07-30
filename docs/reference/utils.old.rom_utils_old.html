@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>utils.old.rom_utils_old</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-991b1886d3c685c7aa2b62b80640c7af.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../reference/_styles-quartodoc.css">
+</head>
+
+<body class="nav-sidebar floating fullcontent quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/utils.html">Utilities</a></li><li class="breadcrumb-item"><a href="../reference/utils.old.rom_utils_old.html">utils.old.rom_utils_old</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Function reference</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Full-Order Model (FOM)</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/fom.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">fom</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/fom.fem_utils.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">fom.fem_utils</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Reduced-Order Model (ROM)</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.bilinear_form_rom.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.bilinear_form_rom</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.linear_form_rom.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.linear_form_rom</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.rom_error_est.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.rom_error_est</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.rom_utils.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.rom_utils</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.linear_form_hyperrom.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.linear_form_hyperrom</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">DEIM</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+ <span class="menu-text">reference/rom.deim.qmd</span>
+  </li>
+          <li class="sidebar-item">
+ <span class="menu-text">reference/rom.deim.deim.qmd</span>
+  </li>
+          <li class="sidebar-item">
+ <span class="menu-text">reference/rom.deim.bilinear_form_hyperrom_deim.qmd</span>
+  </li>
+          <li class="sidebar-item">
+ <span class="menu-text">reference/rom.deim.linear_form_hyperrom_deim.qmd</span>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">ECSW</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.ecsw.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.ecsw</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.ecsw.custom_nnls.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.ecsw.custom_nnls</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/rom.ecsw.hyperreduce.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rom.ecsw.hyperreduce</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Utilities</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.imports.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.imports</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.old.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.old</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.old.rom_utils_old.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">utils.old.rom_utils_old</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.reduced_basis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.reduced_basis</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.reduced_basis.svd.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.reduced_basis.svd</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Visualization</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.visualization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.visualization</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.visualization.generate_vtk.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.visualization.generate_vtk</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.visualization.generate_vtu.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.visualization.generate_vtu</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.visualization.vtuwriter.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.visualization.vtuwriter</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.visualization.color_palette.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">utils.visualization.color_palette</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    
+<!-- main -->
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/utils.html">Utilities</a></li><li class="breadcrumb-item"><a href="../reference/utils.old.rom_utils_old.html">utils.old.rom_utils_old</a></li></ol></nav></header>
+
+
+
+
+<section id="skrom.utils.old.rom_utils_old" class="level1">
+<h1>utils.old.rom_utils_old</h1>
+<p><code>utils.old.rom_utils_old</code></p>
+<section id="functions" class="level2">
+<h2 class="anchored" data-anchor-id="functions">Functions</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#skrom.utils.old.rom_utils_old.generate_gaussian_samples">generate_gaussian_samples</a></td>
+<td>Generate Gaussian-distributed samples based on provided bounds.</td>
+</tr>
+<tr class="even">
+<td><a href="#skrom.utils.old.rom_utils_old.generate_lhs">generate_lhs</a></td>
+<td>Generate a Latin Hypercube Sampling (LHS) design.</td>
+</tr>
+<tr class="odd">
+<td><a href="#skrom.utils.old.rom_utils_old.generate_sobol">generate_sobol</a></td>
+<td>Generate a scaled Sobol sequence.</td>
+</tr>
+<tr class="even">
+<td><a href="#skrom.utils.old.rom_utils_old.latin_hypercube_train_test_split">latin_hypercube_train_test_split</a></td>
+<td>Split snapshots using Latin Hypercube Sampling (LHS) indices.</td>
+</tr>
+<tr class="odd">
+<td><a href="#skrom.utils.old.rom_utils_old.load_rom_data">load_rom_data</a></td>
+<td>Load ROM data from disk into memory or object attributes.</td>
+</tr>
+<tr class="even">
+<td><a href="#skrom.utils.old.rom_utils_old.newton_rom_solver">newton_rom_solver</a></td>
+<td>Solve ROM equations via Newton’s method.</td>
+</tr>
+<tr class="odd">
+<td><a href="#skrom.utils.old.rom_utils_old.rom_data_gen">rom_data_gen</a></td>
+<td>Save ROM simulation data to disk.</td>
+</tr>
+<tr class="even">
+<td><a href="#skrom.utils.old.rom_utils_old.sobol_train_test_split">sobol_train_test_split</a></td>
+<td>Split snapshots according to a Sobol quasi-random sequence.</td>
+</tr>
+<tr class="odd">
+<td><a href="#skrom.utils.old.rom_utils_old.train_test_split">train_test_split</a></td>
+<td>Randomly split snapshots into training and testing masks.</td>
+</tr>
+</tbody>
+</table>
+<section id="skrom.utils.old.rom_utils_old.generate_gaussian_samples" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.generate_gaussian_samples">generate_gaussian_samples</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.generate_gaussian_samples(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    dimensions,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    num_points,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    bounds,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Generate Gaussian-distributed samples based on provided bounds.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 21%">
+<col style="width: 59%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>dimensions</td>
+<td>int</td>
+<td>Number of dimensions.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>num_points</td>
+<td>int</td>
+<td>Number of samples to generate.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>bounds</td>
+<td>sequence of tuple of float</td>
+<td>List of (min, max) for each dimension; used to compute means and std devs.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 41%">
+<col style="width: 49%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>samples</td>
+<td>(ndarray, shape(num_points, dimensions))</td>
+<td>Gaussian random samples (not clipped to bounds).</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes">Notes</h4>
+<ul>
+<li>Mean is (min+max)/2, std dev is (max-min)/5.</li>
+</ul>
+</section>
+<section id="examples" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h4>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> gauss <span class="op">=</span> generate_gaussian_samples(<span class="dv">2</span>, <span class="dv">50</span>, [(<span class="op">-</span><span class="dv">2</span>,<span class="dv">2</span>), (<span class="dv">0</span>,<span class="dv">1</span>)])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.generate_lhs" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.generate_lhs">generate_lhs</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.generate_lhs(dimensions, num_points, bounds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Generate a Latin Hypercube Sampling (LHS) design.</p>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 30%">
+<col style="width: 44%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>dimensions</td>
+<td>int</td>
+<td>Number of sample dimensions.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>num_points</td>
+<td>int</td>
+<td>Number of LHS points to generate.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>bounds</td>
+<td>sequence of tuple of float</td>
+<td>List of (min, max) pairs per dimension.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 46%">
+<col style="width: 43%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>samples</td>
+<td>(ndarray, shape(num_points, dimensions))</td>
+<td>LHS points scaled to the given bounds.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-1" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-1">Examples</h4>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> lhs_pts <span class="op">=</span> generate_lhs(<span class="dv">3</span>, <span class="dv">10</span>, [(<span class="dv">0</span>,<span class="dv">1</span>), (<span class="dv">1</span>,<span class="dv">2</span>), (<span class="op">-</span><span class="dv">1</span>,<span class="dv">1</span>)])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.generate_sobol" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.generate_sobol">generate_sobol</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.generate_sobol(dimensions, num_points, bounds)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Generate a scaled Sobol sequence.</p>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 24%">
+<col style="width: 55%">
+<col style="width: 10%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>dimensions</td>
+<td>int</td>
+<td>Number of dimensions for the sequence.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>num_points</td>
+<td>int</td>
+<td>Number of Sobol points to generate (power of two recommended).</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>bounds</td>
+<td>sequence of tuple of float</td>
+<td>List of (min, max) for each dimension.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 41%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>samples</td>
+<td>(ndarray, shape(num_points, dimensions))</td>
+<td>Sobol sequence points scaled to the given bounds.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-2" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-2">Examples</h4>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> sobol_pts <span class="op">=</span> generate_sobol(<span class="dv">2</span>, <span class="dv">8</span>, [(<span class="dv">0</span>,<span class="dv">1</span>), (<span class="dv">0</span>,<span class="dv">5</span>)])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.latin_hypercube_train_test_split" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.latin_hypercube_train_test_split">latin_hypercube_train_test_split</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.latin_hypercube_train_test_split(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    N_snap,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    train_percentage<span class="op">=</span><span class="fl">0.8</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Split snapshots using Latin Hypercube Sampling (LHS) indices.</p>
+<section id="parameters-3" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 18%">
+<col style="width: 8%">
+<col style="width: 62%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>N_snap</td>
+<td>int</td>
+<td>Total number of snapshots.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>train_percentage</td>
+<td>float</td>
+<td>Fraction of snapshots to assign to training. Default is 0.8.</td>
+<td><code>0.8</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 33%">
+<col style="width: 54%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>train_mask</td>
+<td>ndarray of bool, shape (N_snap,)</td>
+<td>Mask of training snapshots selected via LHS ordering.</td>
+</tr>
+<tr class="even">
+<td>test_mask</td>
+<td>ndarray of bool, shape (N_snap,)</td>
+<td>Mask of testing snapshots.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-3" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-3">Examples</h4>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> train_mask, test_mask <span class="op">=</span> latin_hypercube_train_test_split(<span class="dv">50</span>, <span class="fl">0.6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.load_rom_data" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.load_rom_data">load_rom_data</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.load_rom_data(<span class="va">self</span><span class="op">=</span><span class="va">None</span>, rom_data_dir<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Load ROM data from disk into memory or object attributes.</p>
+<p>Searches for <code>fos_solutions.npy</code> and <code>ROM_simulation_data.npz</code> under the given directory (or infers from <code>self.problem_name</code>), loads arrays, and returns or assigns them.</p>
+<section id="parameters-4" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 13%">
+<col style="width: 64%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>self</td>
+<td>object or None</td>
+<td>If None, function returns data; otherwise assigns to <code>self</code> attributes.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>rom_data_dir</td>
+<td>str or Path</td>
+<td>Directory containing ROM_data; if None, inferred from <code>self.problem_name</code>.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 37%">
+<col style="width: 56%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>(fos_solutions, sim_data) if self is None</td>
+<td>Tuple of the full-order solutions array and dict of other data.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td>None if self is not None</td>
+<td>Data assigned as attributes on <code>self</code>.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>FileNotFoundError</td>
+<td>If expected data files are missing.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-4" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-4">Examples</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> sols, data <span class="op">=</span> load_rom_data(<span class="va">None</span>, <span class="st">'/path/ROM_data'</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> load_rom_data(problem_instance, rom_data_dir)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.newton_rom_solver" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.newton_rom_solver">newton_rom_solver</h3>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.newton_rom_solver(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    instance,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    u,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="fl">0.01</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    maxit<span class="op">=</span><span class="dv">50</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    params<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Solve ROM equations via Newton’s method.</p>
+<p>Iteratively updates the reduced coefficients <code>u</code> to converge to the full-order solution based on provided reduced operators and interpolation.</p>
+<section id="parameters-5" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 11%">
+<col style="width: 69%">
+<col style="width: 10%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>instance</td>
+<td>object</td>
+<td>ROM object with attributes <code>T_ref</code>, <code>U</code>, <code>basis</code>, and method <code>reduced_operators</code>.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>u</td>
+<td>ndarray</td>
+<td>Initial reduced coefficients vector.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="odd">
+<td>tol</td>
+<td>float</td>
+<td>Convergence tolerance on the change norm (default is 1e-2).</td>
+<td><code>0.01</code></td>
+</tr>
+<tr class="even">
+<td>maxit</td>
+<td>int</td>
+<td>Maximum number of Newton iterations (default is 50).</td>
+<td><code>50</code></td>
+</tr>
+<tr class="odd">
+<td>params</td>
+<td>dict or None</td>
+<td>Optional parameters to pass to <code>reduced_operators</code>.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-5" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 12%">
+<col style="width: 75%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>u_sol</td>
+<td>ndarray</td>
+<td>Reconstructed full-order solution upon convergence.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises-1" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-1">Raises</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 17%">
+<col style="width: 72%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>RuntimeError</td>
+<td>If convergence is not achieved within <code>maxit</code> iterations.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-5" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-5">Examples</h4>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> u0 <span class="op">=</span> np.zeros(instance.U.shape[<span class="dv">1</span>])</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> u_sol <span class="op">=</span> newton_rom_solver(instance, u0, tol<span class="op">=</span><span class="fl">1e-5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.rom_data_gen" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.rom_data_gen">rom_data_gen</h3>
+<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.rom_data_gen(save_kw, problem_path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Save ROM simulation data to disk.</p>
+<p>Extracts full-order solutions and other simulation outputs into a dedicated <code>ROM_data</code> folder under <code>problem_path</code>.</p>
+<section id="parameters-6" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-6">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 7%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>save_kw</td>
+<td>dict</td>
+<td>Keyword-data mapping containing at least the key ‘fos_solutions’ for full-order snapshots and other arrays to save.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>problem_path</td>
+<td>str or Path</td>
+<td>Base directory for the ROM_data subfolder.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-6" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-6">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises-2" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-2">Raises</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>KeyError</td>
+<td>If ‘fos_solutions’ key is missing in save_kw.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-6" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-6">Examples</h4>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> rom_data_gen({<span class="st">'fos_solutions'</span>: sols, <span class="st">'U'</span>: U, <span class="st">'basis'</span>: basis}, <span class="st">'/path/to/problem'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.sobol_train_test_split" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.sobol_train_test_split">sobol_train_test_split</h3>
+<div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.sobol_train_test_split(N_snap, train_percentage<span class="op">=</span><span class="fl">0.8</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Split snapshots according to a Sobol quasi-random sequence.</p>
+<section id="parameters-7" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-7">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 7%">
+<col style="width: 62%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>N_snap</td>
+<td>int</td>
+<td>Number of snapshots to split.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>train_percentage</td>
+<td>float</td>
+<td>Proportion of snapshots assigned to training. Default is 0.8.</td>
+<td><code>0.8</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-7" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-7">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 44%">
+<col style="width: 39%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>train_mask</td>
+<td>ndarray of bool, shape (N_snap,)</td>
+<td>Sobol-ordered training mask.</td>
+</tr>
+<tr class="even">
+<td>test_mask</td>
+<td>ndarray of bool, shape (N_snap,)</td>
+<td>Sobol-ordered testing mask.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-7" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-7">Examples</h4>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> train_mask, test_mask <span class="op">=</span> sobol_train_test_split(<span class="dv">32</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="skrom.utils.old.rom_utils_old.train_test_split" class="level3">
+<h3 class="anchored" data-anchor-id="skrom.utils.old.rom_utils_old.train_test_split">train_test_split</h3>
+<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>utils.old.rom_utils_old.train_test_split(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    N_snap,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    N_sel<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    train_percentage<span class="op">=</span><span class="fl">0.8</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Randomly split snapshots into training and testing masks.</p>
+<section id="parameters-8" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-8">Parameters</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 3%">
+<col style="width: 82%">
+<col style="width: 5%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>N_snap</td>
+<td>int</td>
+<td>Total number of snapshots available.</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>N_sel</td>
+<td>int</td>
+<td>Number of snapshots to select for splitting. If provided, samples are randomly chosen without replacement from the full set before splitting. Default is None (use all snapshots).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>train_percentage</td>
+<td>float</td>
+<td>Fraction of snapshots to assign to the training set (between 0 and 1). Default is 0.8.</td>
+<td><code>0.8</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-8" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-8">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 38%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>train_mask</td>
+<td>ndarray of bool, shape (N_snap,)</td>
+<td>Boolean mask indicating training samples.</td>
+</tr>
+<tr class="even">
+<td>test_mask</td>
+<td>ndarray of bool, shape (N_snap,)</td>
+<td>Boolean mask indicating testing samples.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="notes-1" class="level4 doc-section doc-section-notes">
+<h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-1">Notes</h4>
+<ul>
+<li>If <code>N_sel</code> is given, <code>train_percentage</code> is still applied relative to <code>N_snap</code>.</li>
+<li>Masks are built by first permuting or selecting indices, then assigning the first <code>int(N_snap * train_percentage)</code> to training, the rest to testing.</li>
+</ul>
+</section>
+<section id="examples-8" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-8">Examples</h4>
+<div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> train_mask, test_mask <span class="op">=</span> train_test_split(<span class="dv">100</span>, train_percentage<span class="op">=</span><span class="fl">0.75</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;&gt;&gt;</span> np.<span class="bu">sum</span>(train_mask), np.<span class="bu">sum</span>(test_mask)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>(<span class="dv">75</span>, <span class="dv">25</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+
+
+</section>
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

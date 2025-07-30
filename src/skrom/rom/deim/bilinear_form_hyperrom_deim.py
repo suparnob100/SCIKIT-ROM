@@ -18,6 +18,7 @@ class BilinearFormHYPERROM_deim(BilinearForm):
     hyperreduction for finite‐element bilinear forms. Builds a reduced‐order
     operator by assembling only a subset of elements and
     reconstructing the full operator via DEIM interpolation.
+    [Author: Suparno Bhattacharyya]
     """
 
     def __init__(self, form, elem_weight,

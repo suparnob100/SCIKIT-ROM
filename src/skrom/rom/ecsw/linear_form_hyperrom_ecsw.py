@@ -16,6 +16,8 @@ The `hyperreduce` folder contains all tools to perform hyper-reduction, includin
     reduced basis
   - Utilities for efficient handling of Dirichlet conditions and element clustering
   - Support for weights, parallelization, and reconstruction of full-order data
+
+  [Author: Suparno Bhattacharyya]
 """
 from typing import Optional
 from threading import Thread

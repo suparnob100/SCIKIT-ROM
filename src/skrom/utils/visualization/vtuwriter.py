@@ -48,6 +48,8 @@ class VTUSeriesWriter:
         Examples
         --------
         >>> writer = VTUSeriesWriter(mesh, "output/vtu", prefix="temp", skip=5)
+
+        [Author: Suparno Bhattacharyya]
         """
         # Convert SciKit-FEM mesh to meshio.Mesh if necessary
         if not isinstance(mesh, meshio.Mesh):
@@ -93,6 +95,8 @@ class VTUSeriesWriter:
         Examples
         --------
         >>> writer.write_step(temp_array, time, step_index)
+
+        [Author: Suparno Bhattacharyya]
         """
         if idx % self.skip != 0:
             return
@@ -126,6 +130,8 @@ class VTUSeriesWriter:
         Examples
         --------
         >>> writer.write_pvd("simulation.pvd")
+
+        [Author: Suparno Bhattacharyya]
         """
         root = ET.Element(
             "VTKFile",

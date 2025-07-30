@@ -19,6 +19,8 @@ This module provides:
 
 Together, these functions support data preparation, sampling design,
 basis enrichment, I/O, and nonlinear solves in full‐to‐reduced‐order pipelines.
+
+[Authors: Suparno Bhattacharyya, Ali Hamza Abidi Syed]
 """
 
 from skrom.utils.imports import *

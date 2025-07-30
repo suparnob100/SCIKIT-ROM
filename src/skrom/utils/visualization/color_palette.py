@@ -6,6 +6,8 @@ Custom Matplotlib color palettes.
 
 This module provides functions to set and retrieve predefined color palettes
 for Matplotlib plots, enabling consistent styling across figures.
+
+[Author: Suparno Bhattacharyya]
 """
 
 def set_color_palette():
