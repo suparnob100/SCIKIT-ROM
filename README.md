@@ -346,4 +346,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 💬 Support
 
-- **Documentation**: [https://suparnobhattacharyya.github.io/SCIKIT-ROM-SITE/](https://scikitrom.github.io//)
+- **Documentation**: [https://scikitrom.github.io/](https://scikitrom.github.io//)
