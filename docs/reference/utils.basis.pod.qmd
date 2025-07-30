@@ -1,4 +1,0 @@
-# utils.basis.pod { #skrom.utils.basis.pod }
-
-`utils.basis.pod`
-

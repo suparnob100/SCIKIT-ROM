@@ -1,4 +1,0 @@
-# utils.fem_utils { #skrom.utils.fem_utils }
-
-`utils.fem_utils`
-
