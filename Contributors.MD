@@ -1,10 +1,10 @@
-## Lead developer
+## Lead Developer
 
 **Suparno Bhattacharyya** [Asst. Research Scientist, Institute of Data Science, Texas A&M University]
 
 ### Contributors
 
-**Ali Hamza Abidi Syed** [Ph.D. student, Dept. of Mathematics, Texas A&M University]
+- **Ali Hamza Abidi Syed** [Ph.D. student, Dept. of Mathematics, Texas A&M University]
 
 ### Members
 
