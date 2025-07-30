@@ -1,0 +1,98 @@
+# utils.visualization.vtuwriter { #skrom.utils.visualization.vtuwriter }
+
+`utils.visualization.vtuwriter`
+
+
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [VTUSeriesWriter](#skrom.utils.visualization.vtuwriter.VTUSeriesWriter) | Collect and export simulation snapshots as VTU and PVD files. |
+
+### VTUSeriesWriter { #skrom.utils.visualization.vtuwriter.VTUSeriesWriter }
+
+```python
+utils.visualization.vtuwriter.VTUSeriesWriter(
+    mesh,
+    output_dir,
+    *,
+    prefix='step',
+    skip=2,
+    cell_type='tetra',
+)
+```
+
+Collect and export simulation snapshots as VTU and PVD files.
+
+Manages writing of individual VTU files at specified time steps and
+generates a PVD index file for seamless time-series playback.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [write_pvd](#skrom.utils.visualization.vtuwriter.VTUSeriesWriter.write_pvd) | Generate a PVD collection file for all written VTU snapshots. |
+| [write_step](#skrom.utils.visualization.vtuwriter.VTUSeriesWriter.write_step) | Write a VTU file for a simulation snapshot. |
+
+##### write_pvd { #skrom.utils.visualization.vtuwriter.VTUSeriesWriter.write_pvd }
+
+```python
+utils.visualization.vtuwriter.VTUSeriesWriter.write_pvd(
+    pvd_name='collection.pvd',
+)
+```
+
+Generate a PVD collection file for all written VTU snapshots.
+
+Iterates over recorded entries and constructs an XML-based PVD file
+that ParaView can use to load time-series data.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type   | Description                                                | Default            |
+|----------|--------|------------------------------------------------------------|--------------------|
+| pvd_name | str    | Filename for the PVD output (default is "collection.pvd"). | `'collection.pvd'` |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type   | Description   |
+|--------|--------|---------------|
+|        | None   |               |
+
+###### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> writer.write_pvd("simulation.pvd")
+```
+
+##### write_step { #skrom.utils.visualization.vtuwriter.VTUSeriesWriter.write_step }
+
+```python
+utils.visualization.vtuwriter.VTUSeriesWriter.write_step(u, t, idx)
+```
+
+Write a VTU file for a simulation snapshot.
+
+Creates a meshio.Mesh with updated point_data and writes it to disk if
+the snapshot index matches the skip interval.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type         | Description                                                                                    | Default    |
+|--------|--------------|------------------------------------------------------------------------------------------------|------------|
+| u      | array_like   | Point-wise scalar data array (e.g., temperature) of length equal to the number of mesh points. | _required_ |
+| t      | float or int | Simulation time corresponding to this snapshot.                                                | _required_ |
+| idx    | int          | Snapshot index; only written if `idx % skip == 0`.                                             | _required_ |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type   | Description   |
+|--------|--------|---------------|
+|        | None   |               |
+
+###### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> writer.write_step(temp_array, time, step_index)
+```

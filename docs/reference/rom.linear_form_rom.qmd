@@ -1,0 +1,138 @@
+# rom.linear_form_rom { #skrom.rom.linear_form_rom }
+
+`rom.linear_form_rom`
+
+Implements reduced-order linear form assembly for full-order to reduced-order transformations.
+
+This module provides:
+  - `LinearFormROM`: a subclass of `skfem.assembly.form.linear_form.LinearForm`
+    that projects full-order element load vectors onto reduced bases,
+    groups elements by Dirichlet-free and mixed-Dirichlet sets for memory-efficient handling,
+    and assembles the global reduced load vector with optional chunked computation.
+
+The `rom` folder contains core tools for reduced-order modeling (ROM), including:
+  - Classes for projecting and assembling reduced-order bilinear and linear forms
+  - Utilities for handling Dirichlet boundary conditions in reduced spaces
+  - Chunked and clustered assembly routines to manage large-scale stiffness/load data
+  - Mapping utilities between full-order and reduced-order degrees of freedom
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [LinearFormROM](#skrom.rom.linear_form_rom.LinearFormROM) | LinearFormROM |
+
+### LinearFormROM { #skrom.rom.linear_form_rom.LinearFormROM }
+
+```python
+rom.linear_form_rom.LinearFormROM(
+    form,
+    ubasis,
+    lob,
+    free_dofs=None,
+    mean=None,
+    nthreads=0,
+    dtype=np.float64,
+)
+```
+
+LinearFormROM
+
+Linear form that projects element load vectors onto reduced bases
+and assembles the global reduced load vector, handling Dirichlet boundary
+conditions via mappings from full to free DOFs.
+
+#### Attributes {.doc-section .doc-section-attributes}
+
+| Name          | Type                                  | Description                                                              |
+|---------------|---------------------------------------|--------------------------------------------------------------------------|
+| r_basis       | (ndarray, shape(N_free, r) or (N, r)) | Reduced basis for load vectors.                                          |
+| free_dofs     | ndarray or None                       | Indices of global free (non-Dirichlet) DOFs.                             |
+| mean          | ndarray or None                       | Mean snapshot vector subtracted before basis computation.                |
+| nthreads      | int                                   | Number of threads for parallel computation.                              |
+| dtype         | data - type                           | Numeric type for computations.                                           |
+| ubasis        | Basis                                 | Full-order finite element basis for test functions.                      |
+| mapping       | (ndarray, shape(N_full))              | Maps global DOF indices to reduced DOF indices or -1 for Dirichlet DOFs. |
+| element_dofs  | ndarray                               | Local-to-global DOF mapping for each element.                            |
+| free_indices  | ndarray                               | Reduced DOF indices for each element and basis function.                 |
+| mask          | ndarray of bool                       | Indicates free DOFs per element.                                         |
+| r             | int                                   | Dimension of the reduced basis.                                          |
+| groupA        | ndarray                               | Indices of elements with all free DOFs.                                  |
+| groupB        | ndarray                               | Indices of elements with some Dirichlet DOFs.                            |
+| chunk_size    | int                                   | Number of elements per chunk in groupA.                                  |
+| n_full_chunks | int                                   | Number of full-sized chunks in groupA.                                   |
+| remainder     | int                                   | Number of leftover elements in groupA.                                   |
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [assemble](#skrom.rom.linear_form_rom.LinearFormROM.assemble) | Assemble the global reduced load vector. |
+| [extract_element_vector](#skrom.rom.linear_form_rom.LinearFormROM.extract_element_vector) | Extract local element load vectors for a linear form. |
+| [hyperreduction](#skrom.rom.linear_form_rom.LinearFormROM.hyperreduction) | Perform hyperreduction to assemble per-element reduced load contributions. |
+
+##### assemble { #skrom.rom.linear_form_rom.LinearFormROM.assemble }
+
+```python
+rom.linear_form_rom.LinearFormROM.assemble(**kwargs)
+```
+
+Assemble the global reduced load vector.
+
+Projects element load vectors onto reduced bases and sums contributions
+over free DOFs only.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type   | Description                                               | Default   |
+|----------|--------|-----------------------------------------------------------|-----------|
+| **kwargs |        | Additional parameters passed to the form during assembly. | `{}`      |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name      | Type                | Description          |
+|-----------|---------------------|----------------------|
+| f_reduced | (ndarray, shape(r)) | Reduced load vector. |
+
+##### extract_element_vector { #skrom.rom.linear_form_rom.LinearFormROM.extract_element_vector }
+
+```python
+rom.linear_form_rom.LinearFormROM.extract_element_vector(basis, **kwargs)
+```
+
+Extract local element load vectors for a linear form.
+
+Computes per-element load contributions for each local basis function.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type          | Description                                             | Default    |
+|----------|---------------|---------------------------------------------------------|------------|
+| basis    | AbstractBasis | Finite element basis associated with the test function. | _required_ |
+| **kwargs |               | Additional keyword arguments passed to the form.        | `{}`       |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name            | Type                                | Description                                                                              |
+|-----------------|-------------------------------------|------------------------------------------------------------------------------------------|
+| element_vectors | (ndarray, shape(n_elements, Nbfun)) | Local load vectors for each element, where Nbfun is the number of local basis functions. |
+
+##### hyperreduction { #skrom.rom.linear_form_rom.LinearFormROM.hyperreduction }
+
+```python
+rom.linear_form_rom.LinearFormROM.hyperreduction(**kwargs)
+```
+
+Perform hyperreduction to assemble per-element reduced load contributions.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type   | Description                                                     | Default   |
+|----------|--------|-----------------------------------------------------------------|-----------|
+| **kwargs |        | Additional parameters passed to the form during hyperreduction. | `{}`      |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name      | Type                            | Description                                                 |
+|-----------|---------------------------------|-------------------------------------------------------------|
+| f_reduced | (ndarray, shape(n_contribs, r)) | Concatenated reduced load contributions for hyperreduction. |

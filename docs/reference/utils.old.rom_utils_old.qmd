@@ -1,0 +1,332 @@
+# utils.old.rom_utils_old { #skrom.utils.old.rom_utils_old }
+
+`utils.old.rom_utils_old`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [generate_gaussian_samples](#skrom.utils.old.rom_utils_old.generate_gaussian_samples) | Generate Gaussian-distributed samples based on provided bounds. |
+| [generate_lhs](#skrom.utils.old.rom_utils_old.generate_lhs) | Generate a Latin Hypercube Sampling (LHS) design. |
+| [generate_sobol](#skrom.utils.old.rom_utils_old.generate_sobol) | Generate a scaled Sobol sequence. |
+| [latin_hypercube_train_test_split](#skrom.utils.old.rom_utils_old.latin_hypercube_train_test_split) | Split snapshots using Latin Hypercube Sampling (LHS) indices. |
+| [load_rom_data](#skrom.utils.old.rom_utils_old.load_rom_data) | Load ROM data from disk into memory or object attributes. |
+| [newton_rom_solver](#skrom.utils.old.rom_utils_old.newton_rom_solver) | Solve ROM equations via Newton’s method. |
+| [rom_data_gen](#skrom.utils.old.rom_utils_old.rom_data_gen) | Save ROM simulation data to disk. |
+| [sobol_train_test_split](#skrom.utils.old.rom_utils_old.sobol_train_test_split) | Split snapshots according to a Sobol quasi-random sequence. |
+| [train_test_split](#skrom.utils.old.rom_utils_old.train_test_split) | Randomly split snapshots into training and testing masks. |
+
+### generate_gaussian_samples { #skrom.utils.old.rom_utils_old.generate_gaussian_samples }
+
+```python
+utils.old.rom_utils_old.generate_gaussian_samples(
+    dimensions,
+    num_points,
+    bounds,
+)
+```
+
+Generate Gaussian-distributed samples based on provided bounds.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name       | Type                       | Description                                                                | Default    |
+|------------|----------------------------|----------------------------------------------------------------------------|------------|
+| dimensions | int                        | Number of dimensions.                                                      | _required_ |
+| num_points | int                        | Number of samples to generate.                                             | _required_ |
+| bounds     | sequence of tuple of float | List of (min, max) for each dimension; used to compute means and std devs. | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name    | Type                                     | Description                                      |
+|---------|------------------------------------------|--------------------------------------------------|
+| samples | (ndarray, shape(num_points, dimensions)) | Gaussian random samples (not clipped to bounds). |
+
+#### Notes {.doc-section .doc-section-notes}
+
+- Mean is (min+max)/2, std dev is (max-min)/5.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> gauss = generate_gaussian_samples(2, 50, [(-2,2), (0,1)])
+```
+
+### generate_lhs { #skrom.utils.old.rom_utils_old.generate_lhs }
+
+```python
+utils.old.rom_utils_old.generate_lhs(dimensions, num_points, bounds)
+```
+
+Generate a Latin Hypercube Sampling (LHS) design.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name       | Type                       | Description                             | Default    |
+|------------|----------------------------|-----------------------------------------|------------|
+| dimensions | int                        | Number of sample dimensions.            | _required_ |
+| num_points | int                        | Number of LHS points to generate.       | _required_ |
+| bounds     | sequence of tuple of float | List of (min, max) pairs per dimension. | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name    | Type                                     | Description                            |
+|---------|------------------------------------------|----------------------------------------|
+| samples | (ndarray, shape(num_points, dimensions)) | LHS points scaled to the given bounds. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> lhs_pts = generate_lhs(3, 10, [(0,1), (1,2), (-1,1)])
+```
+
+### generate_sobol { #skrom.utils.old.rom_utils_old.generate_sobol }
+
+```python
+utils.old.rom_utils_old.generate_sobol(dimensions, num_points, bounds)
+```
+
+Generate a scaled Sobol sequence.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name       | Type                       | Description                                                    | Default    |
+|------------|----------------------------|----------------------------------------------------------------|------------|
+| dimensions | int                        | Number of dimensions for the sequence.                         | _required_ |
+| num_points | int                        | Number of Sobol points to generate (power of two recommended). | _required_ |
+| bounds     | sequence of tuple of float | List of (min, max) for each dimension.                         | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name    | Type                                     | Description                                       |
+|---------|------------------------------------------|---------------------------------------------------|
+| samples | (ndarray, shape(num_points, dimensions)) | Sobol sequence points scaled to the given bounds. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> sobol_pts = generate_sobol(2, 8, [(0,1), (0,5)])
+```
+
+### latin_hypercube_train_test_split { #skrom.utils.old.rom_utils_old.latin_hypercube_train_test_split }
+
+```python
+utils.old.rom_utils_old.latin_hypercube_train_test_split(
+    N_snap,
+    train_percentage=0.8,
+)
+```
+
+Split snapshots using Latin Hypercube Sampling (LHS) indices.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name             | Type   | Description                                                  | Default    |
+|------------------|--------|--------------------------------------------------------------|------------|
+| N_snap           | int    | Total number of snapshots.                                   | _required_ |
+| train_percentage | float  | Fraction of snapshots to assign to training. Default is 0.8. | `0.8`      |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name       | Type                             | Description                                           |
+|------------|----------------------------------|-------------------------------------------------------|
+| train_mask | ndarray of bool, shape (N_snap,) | Mask of training snapshots selected via LHS ordering. |
+| test_mask  | ndarray of bool, shape (N_snap,) | Mask of testing snapshots.                            |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> train_mask, test_mask = latin_hypercube_train_test_split(50, 0.6)
+```
+
+### load_rom_data { #skrom.utils.old.rom_utils_old.load_rom_data }
+
+```python
+utils.old.rom_utils_old.load_rom_data(self=None, rom_data_dir=None)
+```
+
+Load ROM data from disk into memory or object attributes.
+
+Searches for `fos_solutions.npy` and `ROM_simulation_data.npz` under the
+given directory (or infers from `self.problem_name`), loads arrays, and
+returns or assigns them.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name         | Type           | Description                                                                | Default   |
+|--------------|----------------|----------------------------------------------------------------------------|-----------|
+| self         | object or None | If None, function returns data; otherwise assigns to `self` attributes.    | `None`    |
+| rom_data_dir | str or Path    | Directory containing ROM_data; if None, inferred from `self.problem_name`. | `None`    |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                                      | Description                                                     |
+|--------|-------------------------------------------|-----------------------------------------------------------------|
+|        | (fos_solutions, sim_data) if self is None | Tuple of the full-order solutions array and dict of other data. |
+|        | None if self is not None                  | Data assigned as attributes on `self`.                          |
+
+#### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type              | Description                         |
+|--------|-------------------|-------------------------------------|
+|        | FileNotFoundError | If expected data files are missing. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> sols, data = load_rom_data(None, '/path/ROM_data')
+>>> load_rom_data(problem_instance, rom_data_dir)
+```
+
+### newton_rom_solver { #skrom.utils.old.rom_utils_old.newton_rom_solver }
+
+```python
+utils.old.rom_utils_old.newton_rom_solver(
+    instance,
+    u,
+    tol=0.01,
+    maxit=50,
+    params=None,
+)
+```
+
+Solve ROM equations via Newton’s method.
+
+Iteratively updates the reduced coefficients `u` to converge to the full-order
+solution based on provided reduced operators and interpolation.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type         | Description                                                                       | Default    |
+|----------|--------------|-----------------------------------------------------------------------------------|------------|
+| instance | object       | ROM object with attributes `T_ref`, `U`, `basis`, and method `reduced_operators`. | _required_ |
+| u        | ndarray      | Initial reduced coefficients vector.                                              | _required_ |
+| tol      | float        | Convergence tolerance on the change norm (default is 1e-2).                       | `0.01`     |
+| maxit    | int          | Maximum number of Newton iterations (default is 50).                              | `50`       |
+| params   | dict or None | Optional parameters to pass to `reduced_operators`.                               | `None`     |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type    | Description                                         |
+|--------|---------|-----------------------------------------------------|
+| u_sol  | ndarray | Reconstructed full-order solution upon convergence. |
+
+#### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type         | Description                                               |
+|--------|--------------|-----------------------------------------------------------|
+|        | RuntimeError | If convergence is not achieved within `maxit` iterations. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> u0 = np.zeros(instance.U.shape[1])
+>>> u_sol = newton_rom_solver(instance, u0, tol=1e-5)
+```
+
+### rom_data_gen { #skrom.utils.old.rom_utils_old.rom_data_gen }
+
+```python
+utils.old.rom_utils_old.rom_data_gen(save_kw, problem_path)
+```
+
+Save ROM simulation data to disk.
+
+Extracts full-order solutions and other simulation outputs into a dedicated
+`ROM_data` folder under `problem_path`.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name         | Type        | Description                                                                                                         | Default    |
+|--------------|-------------|---------------------------------------------------------------------------------------------------------------------|------------|
+| save_kw      | dict        | Keyword-data mapping containing at least the key 'fos_solutions' for full-order snapshots and other arrays to save. | _required_ |
+| problem_path | str or Path | Base directory for the ROM_data subfolder.                                                                          | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type   | Description   |
+|--------|--------|---------------|
+|        | None   |               |
+
+#### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type     | Description                                   |
+|--------|----------|-----------------------------------------------|
+|        | KeyError | If 'fos_solutions' key is missing in save_kw. |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> rom_data_gen({'fos_solutions': sols, 'U': U, 'basis': basis}, '/path/to/problem')
+```
+
+### sobol_train_test_split { #skrom.utils.old.rom_utils_old.sobol_train_test_split }
+
+```python
+utils.old.rom_utils_old.sobol_train_test_split(N_snap, train_percentage=0.8)
+```
+
+Split snapshots according to a Sobol quasi-random sequence.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name             | Type   | Description                                                   | Default    |
+|------------------|--------|---------------------------------------------------------------|------------|
+| N_snap           | int    | Number of snapshots to split.                                 | _required_ |
+| train_percentage | float  | Proportion of snapshots assigned to training. Default is 0.8. | `0.8`      |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name       | Type                             | Description                  |
+|------------|----------------------------------|------------------------------|
+| train_mask | ndarray of bool, shape (N_snap,) | Sobol-ordered training mask. |
+| test_mask  | ndarray of bool, shape (N_snap,) | Sobol-ordered testing mask.  |
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> train_mask, test_mask = sobol_train_test_split(32)
+```
+
+### train_test_split { #skrom.utils.old.rom_utils_old.train_test_split }
+
+```python
+utils.old.rom_utils_old.train_test_split(
+    N_snap,
+    N_sel=None,
+    train_percentage=0.8,
+)
+```
+
+Randomly split snapshots into training and testing masks.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name             | Type   | Description                                                                                                                                                                        | Default    |
+|------------------|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| N_snap           | int    | Total number of snapshots available.                                                                                                                                               | _required_ |
+| N_sel            | int    | Number of snapshots to select for splitting. If provided, samples are randomly chosen without replacement from the full set before splitting. Default is None (use all snapshots). | `None`     |
+| train_percentage | float  | Fraction of snapshots to assign to the training set (between 0 and 1). Default is 0.8.                                                                                             | `0.8`      |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name       | Type                             | Description                               |
+|------------|----------------------------------|-------------------------------------------|
+| train_mask | ndarray of bool, shape (N_snap,) | Boolean mask indicating training samples. |
+| test_mask  | ndarray of bool, shape (N_snap,) | Boolean mask indicating testing samples.  |
+
+#### Notes {.doc-section .doc-section-notes}
+
+- If `N_sel` is given, `train_percentage` is still applied relative to `N_snap`.
+- Masks are built by first permuting or selecting indices, then assigning the first
+  `int(N_snap * train_percentage)` to training, the rest to testing.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> train_mask, test_mask = train_test_split(100, train_percentage=0.75)
+>>> np.sum(train_mask), np.sum(test_mask)
+(75, 25)
+```

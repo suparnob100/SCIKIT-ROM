@@ -1,0 +1,266 @@
+# utils.rom_utils { #skrom.utils.rom_utils }
+
+`utils.rom_utils`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [compute_rom_error_metrics_flat](#skrom.utils.rom_utils.compute_rom_error_metrics_flat) | Compute ROM error metrics for data shaped (n_snapshots, n_points). |
+| [generate_gaussian_samples](#skrom.utils.rom_utils.generate_gaussian_samples) | Generates Gaussian distributed samples for each dimension based on calculated means and standard deviations from bounds, |
+| [generate_lhs](#skrom.utils.rom_utils.generate_lhs) | Generates a Latin Hypercube Sampling (LHS). |
+| [generate_rom_error_report](#skrom.utils.rom_utils.generate_rom_error_report) | Print a structured summary of ROM error metrics. |
+| [generate_sobol](#skrom.utils.rom_utils.generate_sobol) | Generates a Sobol sequence. |
+| [hyperreduce](#skrom.utils.rom_utils.hyperreduce) | Executes the randomized SVD + bounded NNLS pipeline on qoi. |
+| [plot_rom_error_diagnostics_flat](#skrom.utils.rom_utils.plot_rom_error_diagnostics_flat) | Plot ROM error diagnostics for flat (time x space) data. |
+| [reconstruct_solution](#skrom.utils.rom_utils.reconstruct_solution) | Reconstruct the full-order solution from the reduced solution. |
+| [rom_data_gen](#skrom.utils.rom_utils.rom_data_gen) | Save ROM data under <problem_path>/ROM_data: |
+| [svd_mode_selector](#skrom.utils.rom_utils.svd_mode_selector) | Selects the number of singular value decomposition (SVD) modes based on a tolerance. |
+| [svd_mode_selector_var](#skrom.utils.rom_utils.svd_mode_selector_var) | Selects the number of singular value decomposition (SVD) modes based on a tolerance. |
+| [update_basis](#skrom.utils.rom_utils.update_basis) | Updates the reduced basis V using new transient snapshots W_mu. |
+
+### compute_rom_error_metrics_flat { #skrom.utils.rom_utils.compute_rom_error_metrics_flat }
+
+```python
+utils.rom_utils.compute_rom_error_metrics_flat(u, u_rom, K=None)
+```
+
+Compute ROM error metrics for data shaped (n_snapshots, n_points).
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type                                            | Description                                          | Default    |
+|--------|-------------------------------------------------|------------------------------------------------------|------------|
+| u      | (array_like, shape(n_snap, n_space))            | Full-order field (each row is one snapshot in time). | _required_ |
+| u_rom  | array_like, same shape as u                     | ROM reconstruction.                                  | _required_ |
+| K      | (array_like, optional, shape(n_space, n_space)) | Stiffness matrix for energy‐norm error.              | `None`     |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name    | Type   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|---------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| metrics | dict   | {   # time‐dependent   'L2_error_time':           ndarray (n_snap,),   'relative_L2_error_time':  ndarray (n_snap,),   'RMSE_time':               ndarray (n_snap,),   'MAE_time':                ndarray (n_snap,),   'time_avg_rel_L2_error':   float,   # global   'L2_error':                float,   'relative_L2_error':       float,   'Linf_error':              float,   'RMSE':                    float,   'MAE':                     float,   'R2':                      float,   'explained_variance':      float,   'quantiles': {      'median_error': float,      'p95_error':   float   },   # if K is given   'energy_norm_error':       float } |
+
+### generate_gaussian_samples { #skrom.utils.rom_utils.generate_gaussian_samples }
+
+```python
+utils.rom_utils.generate_gaussian_samples(dimensions, num_points, bounds)
+```
+
+Generates Gaussian distributed samples for each dimension based on calculated means and standard deviations from bounds,
+without clipping them to the specified bounds.
+
+Parameters:
+dimensions (int): Number of dimensions.
+num_points (int): Number of points to generate.
+bounds (list of tuples): Bounds for each dimension in the form (min, max), from which means and standard deviations are calculated.
+
+Returns:
+np.array: A numpy array containing the Gaussian distributed points.
+
+### generate_lhs { #skrom.utils.rom_utils.generate_lhs }
+
+```python
+utils.rom_utils.generate_lhs(dimensions, num_points, bounds)
+```
+
+Generates a Latin Hypercube Sampling (LHS).
+
+Parameters:
+dimensions (int): Number of dimensions in the sample.
+num_points (int): Number of points in the sample.
+bounds (list of tuples): Each tuple contains the lower and upper bounds for each dimension.
+
+Returns:
+np.array: A numpy array containing the LHS points scaled to the provided bounds.
+
+### generate_rom_error_report { #skrom.utils.rom_utils.generate_rom_error_report }
+
+```python
+utils.rom_utils.generate_rom_error_report(metrics, name='ROM Accuracy Report')
+```
+
+Print a structured summary of ROM error metrics.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name    | Type   | Description                                 | Default                 |
+|---------|--------|---------------------------------------------|-------------------------|
+| metrics | dict   | Output from compute_rom_error_metrics_flat. | _required_              |
+| name    | str    | Title of the report.                        | `'ROM Accuracy Report'` |
+
+### generate_sobol { #skrom.utils.rom_utils.generate_sobol }
+
+```python
+utils.rom_utils.generate_sobol(dimensions, num_points, bounds)
+```
+
+Generates a Sobol sequence.
+
+Parameters:
+dimensions (int): Number of dimensions in the Sobol sequence.
+num_points (int): Number of points in the sequence.
+bounds (list of tuples): A list of tuples containing the lower and upper bounds for each dimension.
+
+Returns:
+np.array: A numpy array containing the Sobol sequence scaled to the provided bounds.
+
+### hyperreduce { #skrom.utils.rom_utils.hyperreduce }
+
+```python
+utils.rom_utils.hyperreduce(
+    qoi,
+    n_components=500,
+    verbosity=2,
+    plot=True,
+    const_tol=1e-10,
+    zero_tol=1e-14,
+    svd=False,
+)
+```
+
+Executes the randomized SVD + bounded NNLS pipeline on qoi.
+
+#### Parameters: {.doc-section .doc-section-parameters}
+
+qoi : ndarray
+    Input data of shape (n_samples, n_features)
+n_components : int
+    Number of SVD components to retain
+verbosity : int
+    Verbosity level for the solver
+plot : bool
+    Whether to display singular value decay plot
+
+#### Returns: {.doc-section .doc-section-returns}
+
+x : ndarray
+    Solution vector from NNLS
+flag : int
+    Exit flag from the solver
+
+### plot_rom_error_diagnostics_flat { #skrom.utils.rom_utils.plot_rom_error_diagnostics_flat }
+
+```python
+utils.rom_utils.plot_rom_error_diagnostics_flat(
+    u,
+    u_rom,
+    rom_relative_error,
+    rom_speed_up,
+    sim_axis,
+    metrics,
+    spatial_shape=None,
+)
+```
+
+Plot ROM error diagnostics for flat (time x space) data.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name          | Type                                 | Description                                                  | Default    |
+|---------------|--------------------------------------|--------------------------------------------------------------|------------|
+| u             | (array_like, shape(n_snap, n_space)) |                                                              | _required_ |
+| u_rom         | array_like, same shape               |                                                              | _required_ |
+| metrics       | dict                                 | Output from compute_rom_error_metrics_flat.                  | _required_ |
+| spatial_shape | tuple                                | (nx, ny) to reshape each snapshot back to 2D for pcolormesh. | `None`     |
+
+### reconstruct_solution { #skrom.utils.rom_utils.reconstruct_solution }
+
+```python
+utils.rom_utils.reconstruct_solution(u_reduced, V_sel, mean)
+```
+
+Reconstruct the full-order solution from the reduced solution.
+The reduced solution (u_reduced) is lifted via the reduced basis defined on the free DOFs,
+then the previously subtracted mean is added and the prescribed Dirichlet values are inserted.
+
+The full solution is approximated as
+    u_full = mean + V_free * u_reduced
+where V_free (here assumed to be self.lob) is defined on the free DOFs.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name             | Type    | Description                                                                             | Default    |
+|------------------|---------|-----------------------------------------------------------------------------------------|------------|
+| u_reduced        | ndarray | The reduced solution vector of dimension (r,).                                          | _required_ |
+| full_dof_count   | int     | The total number of DOFs in the full-order model.                                       | _required_ |
+| dirichlet_nodes  | ndarray | Array of global DOF indices corresponding to Dirichlet boundary conditions.             | _required_ |
+| dirichlet_values | ndarray | Array of values for the Dirichlet nodes (must have the same length as dirichlet_nodes). | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type    | Description                                                           |
+|--------|---------|-----------------------------------------------------------------------|
+| u_full | ndarray | The reconstructed full-order solution of dimension (full_dof_count,). |
+
+### rom_data_gen { #skrom.utils.rom_utils.rom_data_gen }
+
+```python
+utils.rom_utils.rom_data_gen(save_kw, problem_path)
+```
+
+Save ROM data under <problem_path>/ROM_data:
+  - Pops out save_kw["L_solutions"] and writes it to fos_solution.npy
+  - Writes the rest of save_kw into ROM_simulation_data.npz
+
+### svd_mode_selector { #skrom.utils.rom_utils.svd_mode_selector }
+
+```python
+utils.rom_utils.svd_mode_selector(data, tolerance=0.001, modes=False, **kwargs)
+```
+
+Selects the number of singular value decomposition (SVD) modes based on a tolerance.
+
+Parameters:
+- data: The input data for SVD.
+- tolerance: The threshold for cumulative energy content in the SVD spectrum.
+- modes: If True, prints the number of selected modes.
+
+Returns:
+- The number of selected modes and the matrix of SVD left singular vectors.
+
+### svd_mode_selector_var { #skrom.utils.rom_utils.svd_mode_selector_var }
+
+```python
+utils.rom_utils.svd_mode_selector_var(
+    data,
+    tolerance=0.001,
+    modes=False,
+    **kwargs,
+)
+```
+
+Selects the number of singular value decomposition (SVD) modes based on a tolerance.
+
+Parameters:
+- data: The input data for SVD.
+- tolerance: The threshold for cumulative energy content in the SVD spectrum.
+- modes: If True, prints the number of selected modes.
+
+Returns:
+- The number of selected modes and the matrix of SVD left singular vectors.
+
+### update_basis { #skrom.utils.rom_utils.update_basis }
+
+```python
+utils.rom_utils.update_basis(V, W_mu, max_modes=5)
+```
+
+Updates the reduced basis V using new transient snapshots W_mu.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name       | Type                         | Description                                          | Default    |
+|------------|------------------------------|------------------------------------------------------|------------|
+| V          | (ndarray, shape(N_h, r_old)) | Current reduced basis (assumed orthonormal).         | _required_ |
+| W_mu       | (ndarray, shape(N_h, N_t))   | New high-fidelity snapshots for a parameter μ.       | _required_ |
+| energy_tol | float                        | Cumulative energy threshold for selecting POD modes. | _required_ |
+| max_modes  | int                          | Maximum number of new basis vectors to add.          | `5`        |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                         | Description                        |
+|--------|------------------------------|------------------------------------|
+| V_new  | (ndarray, shape(N_h, r_new)) | Updated orthonormal reduced basis. |

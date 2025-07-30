@@ -1,0 +1,67 @@
+# Function reference {.doc .doc-index}
+
+## Problem Classes
+
+Classes for different problems
+
+| | |
+| --- | --- |
+| [problem_classes](problem_classes.qmd#skrom.problem_classes) |  |
+| [problem_classes.master_class_static](problem_classes.master_class_static.qmd#skrom.problem_classes.master_class_static) | Module for static reduced-order modeling (ROM): |
+
+## Full-Order Model (FOM)
+
+Full-order model builders and utilities
+
+| | |
+| --- | --- |
+| [fom](fom.qmd#skrom.fom) |  |
+| [fom.fem_utils](fom.fem_utils.qmd#skrom.fom.fem_utils) | This module includes: |
+
+## Reduced-Order Model (ROM)
+
+Reduced-order model builders and utilities
+
+| | |
+| --- | --- |
+| [rom](rom.qmd#skrom.rom) | The `rom` folder provides core reduced‐order modeling tools: |
+| [rom.bilinear_form_rom](rom.bilinear_form_rom.qmd#skrom.rom.bilinear_form_rom) | Implements reduced-order bilinear form assembly for full-order to reduced-order transformations. |
+| [rom.linear_form_rom](rom.linear_form_rom.qmd#skrom.rom.linear_form_rom) | Implements reduced-order linear form assembly for full-order to reduced-order transformations. |
+| [rom.rom_error_est](rom.rom_error_est.qmd#skrom.rom.rom_error_est) | Compute and visualize ROM error metrics for flat data reconstructions. |
+| [rom.rom_utils](rom.rom_utils.qmd#skrom.rom.rom_utils) | General-purpose utilities for snapshot splitting, sampling, basis updates, data I/O, |
+| [rom.linear_form_hyperrom](rom.linear_form_hyperrom.qmd#skrom.rom.linear_form_hyperrom) |  |
+
+## ECSW
+
+Reduced-order model builders and utilities
+
+| | |
+| --- | --- |
+| [rom.ecsw](rom.ecsw.qmd#skrom.rom.ecsw) | The `ecsw` folder implements Empirical Cubature Subset Weighting (ECSW) methods. |
+| [rom.ecsw.custom_nnls](rom.ecsw.custom_nnls.qmd#skrom.rom.ecsw.custom_nnls) | Implements bounded non-negative least squares (NNLS) for Empirical Cubature Subset Weighting (ECSW). |
+| [rom.ecsw.hyperreduce](rom.ecsw.hyperreduce.qmd#skrom.rom.ecsw.hyperreduce) | Implements the end-to-end hyper-reduction pipeline combining randomized SVD and bounded NNLS. |
+
+## Utilities
+
+Core helpers and reduced-basis tools
+
+| | |
+| --- | --- |
+| [utils](utils.qmd#skrom.utils) |  |
+| [utils.imports](utils.imports.qmd#skrom.utils.imports) | The `utils` package aggregates frequently used libraries and helper routines for the pyHyperRom framework: |
+| [utils.old](utils.old.qmd#skrom.utils.old) |  |
+| [utils.old.rom_utils_old](utils.old.rom_utils_old.qmd#skrom.utils.old.rom_utils_old) |  |
+| [utils.reduced_basis](utils.reduced_basis.qmd#skrom.utils.reduced_basis) |  |
+| [utils.reduced_basis.svd](utils.reduced_basis.svd.qmd#skrom.utils.reduced_basis.svd) |  |
+
+## Visualization
+
+VTU/VTP writers, color palettes, and style packages
+
+| | |
+| --- | --- |
+| [utils.visualization](utils.visualization.qmd#skrom.utils.visualization) |  |
+| [utils.visualization.generate_vtk](utils.visualization.generate_vtk.qmd#skrom.utils.visualization.generate_vtk) |  |
+| [utils.visualization.generate_vtu](utils.visualization.generate_vtu.qmd#skrom.utils.visualization.generate_vtu) |  |
+| [utils.visualization.vtuwriter](utils.visualization.vtuwriter.qmd#skrom.utils.visualization.vtuwriter) |  |
+| [utils.visualization.color_palette](utils.visualization.color_palette.qmd#skrom.utils.visualization.color_palette) |  |

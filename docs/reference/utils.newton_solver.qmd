@@ -1,0 +1,27 @@
+# utils.newton_solver { #skrom.utils.newton_solver }
+
+`utils.newton_solver`
+
+
+
+## Functions
+
+| Name | Description |
+| --- | --- |
+| [newton_solver](#skrom.utils.newton_solver.newton_solver) | Newton–Raphson with zero runtime‐cost BC switching. |
+
+### newton_solver { #skrom.utils.newton_solver.newton_solver }
+
+```python
+utils.newton_solver.newton_solver(
+    assemble_fn,
+    u0,
+    dirichlet_dofs=None,
+    dirichlet_vals=None,
+    *assemble_args,
+    tol=1e-06,
+    maxit=50,
+)
+```
+
+Newton–Raphson with zero runtime‐cost BC switching.

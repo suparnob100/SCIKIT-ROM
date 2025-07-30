@@ -1,0 +1,190 @@
+# hyperreduction.bilinear_form_hyperrom { #skrom.hyperreduction.bilinear_form_hyperrom }
+
+`hyperreduction.bilinear_form_hyperrom`
+
+## hyperreduce/bilinear_form_hyperrom.py {.doc-section .doc-section-hyperreducebilinearformhyperrompy}
+
+Implements Hyper-Reduction (HYPERROM) for reduced-order stiffness assembly.
+
+This module provides:
+
+  - `BilinearFormHYPERROM`: a subclass of `skfem.assembly.form.bilinear_form.BilinearForm`
+    that
+      * clusters elements by number of free DOFs after Dirichlet condensation
+      * extracts and projects element stiffness blocks onto test/trial reduced bases
+      * assembles the global reduced stiffness matrix via vectorized contractions
+
+The `hyperreduce` folder contains all tools for hyper-reduction, including:
+  - Classes for reduced‐order bilinear and linear forms with element clustering
+  - Routines to extract local element matrices/vectors in the ROM basis
+  - Utilities for efficient handling of Dirichlet conditions in reduced spaces
+  - Support for element‐wise parallelization and weighted assembly
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [BilinearFormHYPERROM](#skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM) | Reduced-order bilinear form for hyper-reduction of stiffness matrices. |
+
+### BilinearFormHYPERROM { #skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM }
+
+```python
+hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM(
+    form,
+    elem_weight,
+    ubasis,
+    lob,
+    rob,
+    vbasis=None,
+    free_dofs=None,
+    mean=None,
+    nthreads=0,
+    dtype=np.float64,
+)
+```
+
+Reduced-order bilinear form for hyper-reduction of stiffness matrices.
+
+Projects element-level stiffness matrices onto reduced bases and
+assembles the global reduced stiffness matrix. Handles Dirichlet
+boundary conditions via mapping from full degrees of freedom (DOFs)
+to free (non-Dirichlet) DOFs. All reduced bases and operations
+are performed only on free DOFs, with Dirichlet and mean field
+contributions reinserted during solution reconstruction.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name        | Type              | Description                                                                                                                                | Default      |
+|-------------|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------|
+| form        | callable          | The original bilinear form function taking test and trial basis functions and assembly parameters.                                         | _required_   |
+| elem_weight | scalar or ndarray | Element-wise weights (e.g., quadrature or sampling weights). Can be a single scalar or an array of length equal to the number of elements. | _required_   |
+| ubasis      | Basis             | Trial-space reduced basis object containing full DOF count and element connectivity data.                                                  | _required_   |
+| lob         | ndarray           | Left (test) reduced basis matrix of shape (N_free, r) if free_dofs is provided, or (N, r) otherwise.                                       | _required_   |
+| rob         | ndarray           | Right (trial) reduced basis matrix, with same shape requirements as `lob`.                                                                 | _required_   |
+| vbasis      | Basis             | Reduced basis for test functions; if None, defaults to `ubasis`.                                                                           | `None`       |
+| free_dofs   | ndarray of int    | Indices of global DOFs that are free (non-Dirichlet). If provided, bases are defined only on these DOFs.                                   | `None`       |
+| mean        | ndarray           | Mean snapshot vector of length N_full DOFs, subtracted during basis computation and reinserted during reconstruction.                      | `None`       |
+| nthreads    | int               | Number of threads for element-wise assembly operations. Default 0 (serial execution).                                                      | `0`          |
+| dtype       | data - type       | NumPy data type for assembled matrices and intermediate arrays.                                                                            | `np.float64` |
+
+#### Attributes {.doc-section .doc-section-attributes}
+
+| Name          | Type            | Description                                                           |
+|---------------|-----------------|-----------------------------------------------------------------------|
+| lob           | ndarray         | Left reduced basis (possibly restricted to free DOFs).                |
+| rob           | ndarray         | Right reduced basis (possibly restricted to free DOFs).               |
+| free_dofs     | ndarray or None | Indices of free DOFs if Dirichlet conditions are present.             |
+| mean          | ndarray or None | Mean snapshot vector for solution centering.                          |
+| r             | int             | Reduced dimension (number of basis vectors).                          |
+| mapping       | ndarray of int  | Mapping from full DOF indices to reduced free-DOF indices.            |
+| cluster_idx   | list of ndarray | Indices of elements grouped by number of free DOFs per element.       |
+| order_cluster | list of ndarray | Local ordering for extracting free DOF positions within each cluster. |
+| w_cluster     | list of ndarray | Element weights corresponding to each cluster.                        |
+| R_test_free   | list of ndarray | Test-basis rows restricted to free DOFs per element cluster.          |
+| R_trial_free  | list of ndarray | Trial-basis rows restricted to free DOFs per element cluster.         |
+
+#### Notes {.doc-section .doc-section-notes}
+
+- Clustering by element free DOF count enables vectorized extraction
+  of submatrices for each element group, reducing Python looping.
+- Uses Einstein summation (`np.einsum`) to contract element-level
+  contributions into the reduced global stiffness matrix.
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [assemble_weighted](#skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.assemble_weighted) | Assemble the globally weighted reduced stiffness matrix. |
+| [extract_element_matrices_rom](#skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.extract_element_matrices_rom) | Extract local stiffness matrices in the reduced basis for specified elements. |
+| [extract_element_vector](#skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.extract_element_vector) | Extract local load vectors for a linear form in the ROM. |
+
+##### assemble_weighted { #skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.assemble_weighted }
+
+```python
+hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.assemble_weighted(
+    **kwargs,
+)
+```
+
+Assemble the globally weighted reduced stiffness matrix.
+
+Each element stiffness block is weighted, projected onto reduced
+test/trial bases restricted to free DOFs, and summed into a
+reduced r-by-r matrix.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type   | Description                                                                                      | Default   |
+|----------|--------|--------------------------------------------------------------------------------------------------|-----------|
+| **kwargs |        | Additional options passed to the low-level `form` assembly routines (e.g., quadrature settings). | `{}`      |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name      | Type                   | Description                         |
+|-----------|------------------------|-------------------------------------|
+| K_reduced | (ndarray, shape(r, r)) | Assembled reduced stiffness matrix. |
+
+##### extract_element_matrices_rom { #skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.extract_element_matrices_rom }
+
+```python
+hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.extract_element_matrices_rom(
+    ubasis,
+    vbasis=None,
+    elem_indices=None,
+    **kwargs,
+)
+```
+
+Extract local stiffness matrices in the reduced basis for specified elements.
+
+This routine assembles the original bilinear form on each element
+and returns an array of shape (n_elems, Nbfun, Nbfun), where Nbfun
+is the number of local basis functions.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name         | Type           | Description                                                                                | Default    |
+|--------------|----------------|--------------------------------------------------------------------------------------------|------------|
+| ubasis       | Basis          | Trial-space finite element basis (with restricted elements if `elem_indices` is provided). | _required_ |
+| vbasis       | Basis          | Test-space finite element basis; defaults to `ubasis`.                                     | `None`     |
+| elem_indices | ndarray of int | Subset of element indices to restrict the basis via `with_elements`.                       | `None`     |
+| **kwargs     |                | Extra keyword arguments forwarded to the form assembly.                                    | `{}`       |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name             | Type                                    | Description                                                     |
+|------------------|-----------------------------------------|-----------------------------------------------------------------|
+| element_matrices | (ndarray, shape(n_elems, Nbfun, Nbfun)) | Local element stiffness matrices for each (restricted) element. |
+
+###### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type       | Description                                                |
+|--------|------------|------------------------------------------------------------|
+|        | ValueError | If trial/test bases have mismatched quadrature dimensions. |
+
+##### extract_element_vector { #skrom.hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.extract_element_vector }
+
+```python
+hyperreduction.bilinear_form_hyperrom.BilinearFormHYPERROM.extract_element_vector(
+    basis,
+    **kwargs,
+)
+```
+
+Extract local load vectors for a linear form in the ROM.
+
+Assembles the linear form on each element, returning an array
+of shape (n_elems, Nbfun) of local load contributions.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type          | Description                                        | Default    |
+|----------|---------------|----------------------------------------------------|------------|
+| basis    | AbstractBasis | Test-space finite element basis.                   | _required_ |
+| **kwargs |               | Extra parameters forwarded to the form evaluation. | `{}`       |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name            | Type                             | Description                                  |
+|-----------------|----------------------------------|----------------------------------------------|
+| element_vectors | (ndarray, shape(n_elems, Nbfun)) | Local element load vectors for each element. |

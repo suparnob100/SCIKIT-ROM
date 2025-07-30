@@ -1,0 +1,6 @@
+#tests
+tests/computational_mechanics/static/non_linear/problem_2_h/ROM_data
+tests/computational_mechanics/static/linear/problem_1/ROM_data
+old/
+src/skrom/utils/old
+src/tests

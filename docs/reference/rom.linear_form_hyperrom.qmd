@@ -1,0 +1,158 @@
+# rom.linear_form_hyperrom { #skrom.rom.linear_form_hyperrom }
+
+`rom.linear_form_hyperrom`
+
+## hyperreduce/linear_form_hyperrom.py {.doc-section .doc-section-hyperreducelinearformhyperrompy}
+
+Implements Hyper-Reduction (HYPERROM) for reduced-order load vector assembly.
+
+This module provides:
+  - `LinearFormHYPERROM`: a subclass of `skfem.assembly.form.linear_form.LinearForm`
+    that projects element-wise load contributions onto a reduced basis, clusters
+    elements by free-DOF count after Dirichlet condensation, and assembles the
+    global reduced load vector via vectorized weighted projections.
+
+The `hyperreduce` folder contains all tools to perform hyper-reduction, including:
+  - Reduced-order bilinear forms (`BilinearFormHYPERROM`) and linear forms
+    (`LinearFormHYPERROM`)
+  - Routines for extracting element stiffness matrices and load vectors in a
+    reduced basis
+  - Utilities for efficient handling of Dirichlet conditions and element clustering
+  - Support for weights, parallelization, and reconstruction of full-order data
+
+## Classes
+
+| Name | Description |
+| --- | --- |
+| [LinearFormHYPERROM](#skrom.rom.linear_form_hyperrom.LinearFormHYPERROM) | Reduced-order linear form for hyper-reduction of load vectors. |
+
+### LinearFormHYPERROM { #skrom.rom.linear_form_hyperrom.LinearFormHYPERROM }
+
+```python
+rom.linear_form_hyperrom.LinearFormHYPERROM(
+    form,
+    elem_weight,
+    ubasis,
+    lob,
+    free_dofs=None,
+    mean=None,
+    nthreads=0,
+    dtype=np.float64,
+)
+```
+
+Reduced-order linear form for hyper-reduction of load vectors.
+
+Projects element-level load vectors onto a reduced basis and assembles the
+global reduced load vector. Handles Dirichlet boundary conditions via mapping
+from full degrees of freedom (DOFs) to free (non-Dirichlet) DOFs. All operations
+occur only on free DOFs, with Dirichlet and mean field contributions reinserted
+during reconstruction.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name        | Type              | Description                                                                                                                                | Default      |
+|-------------|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------|--------------|
+| form        | callable          | The original linear form function evaluating local load contributions.                                                                     | _required_   |
+| elem_weight | scalar or ndarray | Element-wise weights (e.g., quadrature or sampling weights). Can be a single scalar or an array of length equal to the number of elements. | _required_   |
+| ubasis      | Basis             | Finite element basis object with full DOF count and element connectivity.                                                                  | _required_   |
+| lob         | ndarray           | Reduced basis matrix of shape (N_free, r) if `free_dofs` is provided, or (N, r) otherwise, where r is the reduced dimension.               | _required_   |
+| free_dofs   | ndarray of int    | Indices of global DOFs that are free (non-Dirichlet). If provided, basis is defined only on these DOFs.                                    | `None`       |
+| mean        | ndarray           | Mean snapshot vector of length N_full DOFs, subtracted during basis computation and reinserted during reconstruction.                      | `None`       |
+| nthreads    | int               | Number of threads for parallel element-wise evaluation. Default is 0 (serial).                                                             | `0`          |
+| dtype       | data - type       | NumPy data type for assembled vectors and intermediate arrays.                                                                             | `np.float64` |
+
+#### Methods
+
+| Name | Description |
+| --- | --- |
+| [assemble_weighted](#skrom.rom.linear_form_hyperrom.LinearFormHYPERROM.assemble_weighted) | Assemble the weighted reduced load vector. |
+| [extract_element_vector](#skrom.rom.linear_form_hyperrom.LinearFormHYPERROM.extract_element_vector) | Extract local element load vectors for full-order linear forms. |
+| [extract_element_vector_rom](#skrom.rom.linear_form_hyperrom.LinearFormHYPERROM.extract_element_vector_rom) | Extract local element load vectors in the reduced setting. |
+
+##### assemble_weighted { #skrom.rom.linear_form_hyperrom.LinearFormHYPERROM.assemble_weighted }
+
+```python
+rom.linear_form_hyperrom.LinearFormHYPERROM.assemble_weighted(**kwargs)
+```
+
+Assemble the weighted reduced load vector.
+
+Each element load vector is multiplied by its weight and projected onto
+the reduced basis (restricted to free DOFs), then summed into a single
+vector of length r.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type   | Description                                                                                                      | Default   |
+|----------|--------|------------------------------------------------------------------------------------------------------------------|-----------|
+| **kwargs |        | Additional parameters forwarded to `extract_element_vector_rom`, such as previous states or material parameters. | `{}`      |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name      | Type                | Description                    |
+|-----------|---------------------|--------------------------------|
+| f_reduced | (ndarray, shape(r)) | Assembled reduced load vector. |
+
+##### extract_element_vector { #skrom.rom.linear_form_hyperrom.LinearFormHYPERROM.extract_element_vector }
+
+```python
+rom.linear_form_hyperrom.LinearFormHYPERROM.extract_element_vector(
+    basis,
+    **kwargs,
+)
+```
+
+Extract local element load vectors for full-order linear forms.
+
+Assembles the linear form on each element of a full-order basis, returning
+an array of shape (n_elem, Nbfun) of load contributions.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name     | Type          | Description                                               | Default    |
+|----------|---------------|-----------------------------------------------------------|------------|
+| basis    | AbstractBasis | Finite element basis for test functions.                  | _required_ |
+| **kwargs |               | Additional parameters for assembly (e.g., boundary data). | `{}`       |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name            | Type                            | Description                          |
+|-----------------|---------------------------------|--------------------------------------|
+| element_vectors | (ndarray, shape(n_elem, Nbfun)) | Local load vectors for each element. |
+
+##### extract_element_vector_rom { #skrom.rom.linear_form_hyperrom.LinearFormHYPERROM.extract_element_vector_rom }
+
+```python
+rom.linear_form_hyperrom.LinearFormHYPERROM.extract_element_vector_rom(
+    basis,
+    elem_indices=None,
+    **kwargs,
+)
+```
+
+Extract local element load vectors in the reduced setting.
+
+Evaluates the original linear form on each specified element and returns
+an array of shape (n_elem, Nbfun), where Nbfun is the number of local
+basis functions per element.
+
+###### Parameters {.doc-section .doc-section-parameters}
+
+| Name         | Type           | Description                                                     | Default    |
+|--------------|----------------|-----------------------------------------------------------------|------------|
+| basis        | Basis          | Basis restricted via `with_elements` for trial functions.       | _required_ |
+| elem_indices | ndarray of int | Subset of elements to include; passed to `with_elements`.       | `None`     |
+| **kwargs     |                | Extra keyword arguments forwarded to low-level form evaluation. | `{}`       |
+
+###### Returns {.doc-section .doc-section-returns}
+
+| Name            | Type                            | Description                                       |
+|-----------------|---------------------------------|---------------------------------------------------|
+| element_vectors | (ndarray, shape(n_elem, Nbfun)) | Local load vectors for each (restricted) element. |
+
+###### Raises {.doc-section .doc-section-raises}
+
+| Name   | Type       | Description                                  |
+|--------|------------|----------------------------------------------|
+|        | ValueError | If `basis` is None or improperly configured. |

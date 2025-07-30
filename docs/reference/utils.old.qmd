@@ -1,0 +1,26 @@
+# utils.old { #skrom.utils.old }
+
+`utils.old`
+
+## utils.old {.doc-section .doc-section-utilsold}
+
+
+Legacy utility functions and experimental prototypes retained for reference and backward compatibility.
+
+This subpackage contains all "old" or deprecated utility routines that have since been superseded by newer, more robust implementations in the main `utils` package. It allows you to review earlier approaches and compare behavior against current methods.
+
+Available modules (non-exhaustive):
+
+- `svd_mode_selectors_old.py`  : Original SVD mode selection routines using basic cumulative-energy thresholds.
+- `approximating_ln.py`        : Naive series-expansion algorithm for natural logarithm approximation.
+- `magnetic_field_utils_old.py`: Early SFML-based routines for drawing electric and magnetic field visualizations.
+- `kotter_change_plan.py`      : Preliminary Kotter’s Eight-Step Change Management plan generator.
+- `dehydration_monitor_old.py` : Prototype hydration-tracking functions for Alzheimer’s monitoring device.
+- `wavelet_basics.py`          : Initial implementations of wavelet transform utilities.
+
+## Examples {.doc-section .doc-section-examples}
+
+```python
+>>> from utils.old import svd_mode_selectors_old
+>>> modes, U = svd_mode_selectors_old.svd_mode_selector(data_matrix, tolerance=1e-2)
+```

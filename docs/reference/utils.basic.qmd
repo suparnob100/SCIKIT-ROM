@@ -1,0 +1,6 @@
+# utils.basic { #skrom.utils.basic }
+
+`utils.basic`
+
+This module imports essential libraries commonly used in pyHyperRom.
+By using ``from pyHyperRom.basic import *``, users can access frequently utilized libraries.
