@@ -1,13 +1,9 @@
 """
 This module includes:
-
 - `build_pc_amgsa`: construct AMG smoothed aggregation preconditioner.
-
 - `element2location`: generate element-to-coordinate mappings from mesh data.
-
 - `newton_solver` and its helpers: perform Newton–Raphson solves with or without Dirichlet BC.
 """
-
 import numpy as np
 from skrom.utils.imports import *
 from pyamg import smoothed_aggregation_solver
@@ -60,7 +56,6 @@ def element2location(mesh):
 
     return element_coords
 
-
 def compute_basis_regions(basis, masks):
     """
     Given a dict mapping region names to boolean element‐masks,
@@ -71,7 +66,6 @@ def compute_basis_regions(basis, masks):
         name: basis.with_elements(elem_indices[mask])
         for name, mask in masks.items()
     }
-
 
 def load_domain(instance):
     dom = instance.domain()
@@ -216,8 +210,6 @@ def _newton_with_dirichlet_bc(assemble_fn, rhs_fn, u0, dofs, vals, *args, tol, m
         elif itr == maxit - 1:
             print("Newton solver did not converge!")
             return u
-
-
 
 def _newton_no_dirichlet_bc(assemble_fn, rhs_fn, u0, *args, tol, maxit):
     """

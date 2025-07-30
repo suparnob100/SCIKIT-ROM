@@ -498,4 +498,3 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         # Rearrange data from (Nbfun, Nbfun, n_elements) to (n_elements, Nbfun, Nbfun)
         element_matrices = local_data.transpose(2, 0, 1)
         return element_matrices
-

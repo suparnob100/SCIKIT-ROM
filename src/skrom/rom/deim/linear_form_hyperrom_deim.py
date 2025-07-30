@@ -1,22 +1,3 @@
-"""
-hyperreduce/linear_form_hyperrom.py
------------------------------------
-Implements Hyper-Reduction (HYPERROM) for reduced-order load vector assembly.
-
-This module provides:
-  - `LinearFormHYPERROM`: a subclass of `skfem.assembly.form.linear_form.LinearForm`
-    that projects element-wise load contributions onto a reduced basis, clusters
-    elements by free-DOF count after Dirichlet condensation, and assembles the
-    global reduced load vector via vectorized weighted projections.
-
-The `hyperreduce` folder contains all tools to perform hyper-reduction, including:
-  - Reduced-order bilinear forms (`BilinearFormHYPERROM`) and linear forms
-    (`LinearFormHYPERROM`)
-  - Routines for extracting element stiffness matrices and load vectors in a
-    reduced basis
-  - Utilities for efficient handling of Dirichlet conditions and element clustering
-  - Support for weights, parallelization, and reconstruction of full-order data
-"""
 from typing import Optional
 from threading import Thread
 import numpy as np
@@ -28,6 +9,15 @@ from skfem.assembly.basis import AbstractBasis
 from numpy.typing import DTypeLike 
 
 class LinearFormHYPERROM_deim(LinearForm):
+
+    """Hyperreduction of a linear form via DEIM and mesh sampling.
+
+    Implements a Discrete Empirical Interpolation Method (DEIM)–based
+    hyperreduction for finite‐element linear forms. Builds a reduced‐order
+    load vector by assembling only a weighted subset of elements and
+    reconstructing the full operator via DEIM interpolation.
+    """
+
     def __init__(self, form, elem_weight, ubasis: Basis, lob,
                  sampled_rows, deim_mat,
                  free_dofs: Optional[np.ndarray] = None,
@@ -36,6 +26,58 @@ class LinearFormHYPERROM_deim(LinearForm):
 
         super().__init__(form)
 
+        """
+        Parameters
+        ----------
+        form : callable
+            The original linear form to be reduced (as in `LinearForm`).
+        elem_weight : array_like, shape (n_elements,)
+            Element weights indicating which elements participate in the reduced mesh.
+            Zero weights drop elements from assembly.
+        ubasis : Basis
+            Test basis for the full‐order model.
+        lob : ndarray, shape (n_free, r)
+            Left (test) reduced basis. Projects to the reduced test space.
+        sampled_rows : array_like, shape (n_samp,)
+            Indices of global rows selected by DEIM for interpolation.
+        deim_mat : ndarray, shape (r, n_samp)
+            DEIM interpolation matrix mapping sampled DOFs back to the reduced basis.
+        free_dofs : ndarray, optional
+            Indices of free (unconstrained) DOFs in the full‐order system.
+        mean : ndarray, optional
+            Mean snapshot vector for centering (if snapshot data is mean‐subtracted).
+        nthreads : int, default 0
+            Number of threads for parallel element‐vector extraction; 0 means serial.
+        dtype : DTypeLike, default np.float64
+            NumPy data type for all internal arrays and computations.
+
+        Attributes
+        ----------
+        r_basis : ndarray, shape (n_free, r)
+            Left (test) reduced basis copy of `lob`.
+        weight : ndarray, shape (n_elements,)
+            Element weights copy of `elem_weight`.
+        nonzero_elements : ndarray, shape (n_active,)
+            Indices of elements with nonzero weight.
+        ubasis : Basis
+            Original full‐order basis reference.
+        ubasis_rom : Basis
+            Basis restricted to the hyperreduced mesh.
+        sampled_rows : ndarray, shape (n_samp,)
+            As above.
+        n_samp : int
+            Number of DEIM sample points.
+        deim_mat : ndarray, shape (r, n_samp)
+            As above.
+        edofs : ndarray, shape (n_active, n_loc)
+            Element‐to‐DOF mapping for restricted mesh.
+        n_dofs : int
+            Total number of global DOFs in the reduced mesh.
+        rows : ndarray, shape (n_active * n_loc,)
+            Flattened element‐DOF indices for vector assembly.
+
+        """
+        
         # ---------------- core members ----------------
         self.r_basis   = lob                  # (N_free, r)
 
@@ -58,23 +100,24 @@ class LinearFormHYPERROM_deim(LinearForm):
     def assemble_deim(self, **kwargs):
 
         """
-        Assemble the globally weighted reduced stiffness matrix.
+        Assemble the hyper-reduced load vector via DEIM.
 
-        Each element stiffness block is weighted, projected onto reduced
-        test/trial bases restricted to free DOFs, and summed into a
-        reduced r-by-r matrix.
+        This method first builds the sampled full-order load vector
+        on the selected elements, then applies the DEIM interpolation
+        matrix to project it onto the reduced basis.
 
         Parameters
         ----------
-        **kwargs
-            Additional options passed to the low-level `form` assembly
-            routines (e.g., quadrature settings).
+        **kwargs : dict
+            Keyword arguments passed to
+            `deim_elem_assembly` / element extraction.
 
-        Returns 
+        Returns
         -------
-        K_reduced : ndarray, shape (r, r)
-            Assembled reduced stiffness matrix.
+        ndarray
+            Reduced-order load vector of shape (r,).
         """
+            
         # Combine default parameters with any additional keyword arguments.
         wdict = FormExtraParams({
             **self.ubasis_rom.default_parameters(),
@@ -90,6 +133,24 @@ class LinearFormHYPERROM_deim(LinearForm):
     
 
     def deim_elem_assembly(self, **kwargs):
+        """
+        Assemble the sampled full-order load vector.
+
+        Extracts element-level load contributions only on the
+        sampled elements, then scatters them into the global
+        load vector.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Keyword arguments passed to
+            `extract_element_vector_rom`.
+
+        Returns
+        -------
+        ndarray
+            Full-order load vector of length `n_dofs`.
+        """
 
         element_vectors = self.extract_element_vector_rom(self.ubasis_rom, elem_indices=self.nonzero_elements, **kwargs)
         data = element_vectors.T.ravel()       # same length, in matching order
@@ -101,32 +162,24 @@ class LinearFormHYPERROM_deim(LinearForm):
         return f
 
 
-    def extract_element_vector_rom(self, basis: Basis, elem_indices: Optional[np.ndarray] = None, **kwargs):
+    def extract_element_vector_rom(self, basis: Basis, elem_indices = None, **kwargs):
         """
-        Extract local element load vectors in the reduced setting.
-
-        Evaluates the original linear form on each specified element and returns
-        an array of shape (n_elem, Nbfun), where Nbfun is the number of local
-        basis functions per element.
+        Extract element vectors for assembling over sampled mesh.
 
         Parameters
         ----------
-        basis : Basis
-            Basis restricted via `with_elements` for trial functions.
-        elem_indices : ndarray of int, optional
-            Subset of elements to include; passed to `with_elements`.
-        **kwargs
-            Extra keyword arguments forwarded to low-level form evaluation.
+        ubasis : Basis
+            Basis for test functions.
+        elem_indices : array_like of int, optional
+            Indices of elements to include in extraction.
+        **kwargs : dict
+            Additional keyword arguments for evaluating the bilinear form over each element.
 
         Returns
         -------
-        element_vectors : ndarray, shape (n_elem, Nbfun)
-            Local load vectors for each (restricted) element.
-
-        Raises
-        ------
-        ValueError
-            If `basis` is None or improperly configured.
+        ndarray
+            Array of shape (n_elems, n_loc) containing
+            the element vectors.
         """
        
         # Fallback: ensure basis is defined.

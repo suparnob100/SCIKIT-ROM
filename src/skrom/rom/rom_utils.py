@@ -442,8 +442,7 @@ def newton_hyper_rom_solver(assemble_func, u, tol=3e-2, maxit=200, param=None):
             
     # raise RuntimeError(f"Newton (direct) did not converge in {maxit} iterations")
 
-
-
+  
 def newton_solver_rom(
     assemble_func,
     u_rom,
@@ -455,6 +454,52 @@ def newton_solver_rom(
     jac_tol: float = 1e-1,
     **kwargs
 ):
+    """
+    Solve nonlinear reduced-order system using Newton's method.
+    
+    Provides two solution strategies: efficient LU refactorization for ROM
+    systems or direct solving with adaptive step damping.
+    
+    Parameters
+    ----------
+    assemble_func : callable
+        Function that assembles Jacobian and residual: (J, R) = func(u_rom, ...)
+    u_rom : array-like
+        Initial guess for reduced-order state vector
+    *args : tuple
+        Additional positional arguments passed to assemble_func
+    alpha : float, default=1.0
+        Step size damping factor (only used when use_lu=False)
+    tol : float, default=1e-3
+        Convergence tolerance on Newton step norm
+    maxit : int, default=100
+        Maximum number of Newton iterations
+    use_lu : bool, default=False
+        If True, use LU factorization with Jacobian reuse for efficiency.
+        If False, use direct solve with step damping and full reconstruction.
+    jac_tol : float, default=1e-1
+        Relative tolerance for Jacobian reuse (only used when use_lu=True)
+    **kwargs : dict
+        Additional keyword arguments passed to assemble_func
+    
+    Returns
+    -------
+    array-like
+        Converged reduced-order state vector u_rom
+    
+    Raises
+    ------
+    RuntimeError
+        If Newton iteration fails to converge within maxit iterations
+        (only when use_lu=True)
+    
+    Notes
+    -----
+    - LU mode: Reuses Jacobian factorization until relative change exceeds jac_tol
+    - Direct mode: Applies adaptive damping every 40 iterations, includes logging
+    - Part of ROM workflow for efficient nonlinear system solving
+    """
+
     """
     Solve a nonlinear reduced-order system via Newton’s method.
 
@@ -563,7 +608,7 @@ def collect_residuals(
     -------
     q_mus : ndarray, shape (n_snapshots, n_residual_components)
         Collected residual evaluations for all training snapshots
-        Each row contains the hyperreduced residual evaluation for one parameter case
+        Each row contains the projected residual evaluation for a single parameter
     """
     
     # Initialize storage for residual evaluations
@@ -604,32 +649,37 @@ def collect_residuals(
     return q_mus
 
 
+def select_elements_and_gauss_weights(n_gauss_points, element_indices, weights):
+    """
+    Select elements and corresponding weights from Gauss points, ensuring consistency
+    by including all Gauss points for each selected element with zero weights for unselected points.
 
-def select_weights(element_indices, weights, mesh):
+    Parameters:
+    n_gauss_points (int): Number of Gauss points per element.
+    element_indices (list or array): Selected Gauss point indices from ECM.
+    weights (list or array): Corresponding weights for selected indices.
+
+    Returns:
+    dict: Mapping from each selected element to a list of weights, with zeros for unselected Gauss points.
+          For each selected element, the list will have exactly `n_gauss_points` entries.
+    """
+    # Initialize a dictionary to store elements with all Gauss points and weights
     element_to_gauss_weights = {}
 
-    # Populate each selected element with weights
+    # Populate each selected element with zero weights for all Gauss points
     for idx, weight in zip(element_indices, weights):
-        # Ensure idx is a scalar by extracting the first element if it's an array
-        if isinstance(idx, np.ndarray) and idx.size == 1:
-            idx = idx.item()  # Convert single-element array to scalar
-        
-        if idx not in element_to_gauss_weights:
-            # Initialize the element with zero if not already in the dictionary
-            element_to_gauss_weights[idx] = 0
+        # Determine which element this Gauss point belongs to
+        element_idx = idx // n_gauss_points
+        gauss_point_idx = idx % n_gauss_points
+
+        # Ensure the element has an entry with zeros for all Gauss points initially
+        if element_idx not in element_to_gauss_weights:
+            element_to_gauss_weights[element_idx] = [0.0] * n_gauss_points
         
         # Update the weight for the selected Gauss point
-        element_to_gauss_weights[idx] += weight
+        element_to_gauss_weights[element_idx][gauss_point_idx] = weight
 
-    all_elems = np.concatenate([
-        np.atleast_1d(v).ravel()
-        for v in element_to_gauss_weights.keys()
-    ])
-    weights = np.any(np.isin(mesh.t.T, all_elems), axis = 1)
-    weights = weights.astype(int)
-
-    return weights
-
+    return element_to_gauss_weights
 
 
 

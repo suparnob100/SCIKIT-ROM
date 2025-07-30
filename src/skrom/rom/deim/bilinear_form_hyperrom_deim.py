@@ -1,22 +1,3 @@
-"""
-hyperreduce/bilinear_form_hyperrom.py
-------------------------------------
-Implements Hyper-Reduction (HYPERROM) for reduced-order stiffness assembly.
-
-This module provides:
-  - `BilinearFormHYPERROM`: a subclass of `skfem.assembly.form.bilinear_form.BilinearForm`
-    that
-      * clusters elements by number of free DOFs after Dirichlet condensation
-      * extracts and projects element stiffness blocks onto test/trial reduced bases
-      * assembles the global reduced stiffness matrix via vectorized contractions
-
-The `hyperreduce` folder contains all tools for hyper-reduction, including:
-  - Classes for reduced‐order bilinear and linear forms with element clustering
-  - Routines to extract local element matrices/vectors in the ROM basis
-  - Utilities for efficient handling of Dirichlet conditions in reduced spaces
-  - Support for element‐wise parallelization and weighted assembly
-"""
-
 from typing import Optional
 from threading import Thread
 import numpy as np
@@ -30,9 +11,13 @@ from scipy.sparse import coo_matrix
 from scipy.sparse import lil_matrix
 
 class BilinearFormHYPERROM_deim(BilinearForm):
-    """
-    Reduced-order bilinear form with element-weighted hyper-reduction.
-    Adds a DEIM path: assemble only sampled rows (P^T J) and lift with deim_mat.
+
+    """Hyperreduction of a bilinear form via DEIM and mesh sampling.
+
+    Implements a Discrete Empirical Interpolation Method (DEIM)–based
+    hyperreduction for finite‐element bilinear forms. Builds a reduced‐order
+    operator by assembling only a subset of elements and
+    reconstructing the full operator via DEIM interpolation.
     """
 
     def __init__(self, form, elem_weight,
@@ -43,13 +28,66 @@ class BilinearFormHYPERROM_deim(BilinearForm):
                  mean: Optional[ndarray] = None,
                  nthreads: int = 0,
                  dtype: DTypeLike = np.float64):
+        
+        """Parameters
+        ----------
+        form : callable
+            The original bilinear form to be reduced (as in `BilinearForm`).
+        elem_weight : array_like, shape (n_elements,)
+            Element weights (1 for selected elements) indicating which elements participate in the reduced mesh.
+            Zero weights drop elements from assembly.
+        ubasis : Basis
+            Trial/test basis for the full‐order model.
+        lob, rob : ndarray, shape (n_free, r)
+            Left (test) and right (trial) reduced bases. `rob` projects to the
+            reduced trial space; `lob` is unused here (can pass `None`).
+        sampled_rows : array_like, shape (n_samp,)
+            Indices of global rows selected by DEIM for interpolation.
+        deim_mat : ndarray, shape (r, n_samp)
+            DEIM interpolation matrix mapping sampled DOFs back to the reduced basis.
+        vbasis : Basis, optional
+            Test basis for reduced assembly. Defaults to `ubasis` if not provided.
+        free_dofs : ndarray, optional
+            Indices of free (unconstrained) DOFs in the full‐order system.
+        mean : ndarray, optional
+            Mean snapshot vector for centering (if snapshot data is mean‐subtracted).
+        nthreads : int, default 0
+            Number of threads for parallel element‐matrix extraction; 0 means serial.
+        dtype : DTypeLike, default np.float64
+            NumPy data type for all internal arrays and computations.
+
+        Attributes
+        ----------
+        weight : ndarray, shape (n_elements,)
+            Element weights copy of `elem_weight`.
+        nonzero_elements : ndarray, shape (n_active,)
+            Indices of elements with nonzero weight.
+        ubasis_rom : Basis
+            Basis restricted to the hyperreduced mesh.
+        sampled_rows : ndarray, shape (n_samp,)
+            As above.
+        n_samp : int
+            Number of DEIM sample points.
+        deim_mat : ndarray, shape (r, n_samp)
+            As above.
+        edofs : ndarray, shape (n_active, n_loc)
+            Element‐to‐DOF mapping for restricted mesh.
+        n_elems, n_loc : int
+            Number of active elements and local DOFs per element.
+        n_dofs : int
+            Total number of global DOFs in the reduced mesh.
+        rows, cols : ndarray
+            Broadcasted element‐DOF indices for sparse assembly.
+        row_flat, col_flat : ndarray
+            Flattened indices for COO construction.
+        """
 
         super().__init__(form)
 
         # ---------------- core variables ----------------
         self.rob = rob                  # right/trial basis (N_free × r)
 
-        # ------------- weights / sampled mesh --------
+        # ------------- sampled mesh --------
         self.weight           = np.array(elem_weight)
         self.nonzero_elements = np.nonzero(self.weight)[0]
         self.ubasis_rom       = ubasis.with_elements(self.nonzero_elements)
@@ -77,23 +115,23 @@ class BilinearFormHYPERROM_deim(BilinearForm):
 
 
     def assemble_deim(self, **kwargs):
-        """
-        Assemble the globally weighted reduced stiffness matrix.
 
-        Each element stiffness block is weighted, projected onto reduced
-        test/trial bases restricted to free DOFs, and summed into a
-        reduced r-by-r matrix.
+        """
+        Assemble the hyper-reduced stiffness matrix via DEIM.
+
+        This first builds the sampled full-order matrix,
+        then projects it onto the reduced basis using the DEIM
+        interpolation matrix.
 
         Parameters
         ----------
-        **kwargs
-            Additional options passed to the low-level `form` assembly
-            routines (e.g., quadrature settings).
+        **kwargs : dict
+            Keyword arguments passed to `deim_elem_assembly`.
 
-        Returns 
+        Returns
         -------
-        K_reduced : ndarray, shape (r, r)
-            Assembled reduced stiffness matrix.
+        ndarray
+            Reduced-order stiffness matrix of shape (r, r).
         """
 
         Sampled_assembly = self.deim_elem_assembly(**kwargs)
@@ -103,6 +141,26 @@ class BilinearFormHYPERROM_deim(BilinearForm):
     
 
     def deim_elem_assembly(self, **kwargs):
+
+        """
+        Assemble the sampled full-order stiffness matrix.
+
+        Extracts element-level contributions only on sampled
+        elements, flattens and filters out zeros, and builds
+        a sparse CSR matrix.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Keyword arguments passed to
+            `extract_element_matrices_rom`.
+
+        Returns
+        -------
+        csr_matrix
+            Sparse full-order stiffness matrix of shape
+            (n_dofs, n_dofs), assembled over sampled elements.
+        """
         # extract element‐wise stiffness tensors: shape (n_elems, n_loc, n_loc)
         em = self.extract_element_matrices_rom(
             self.ubasis_rom, self.ubasis_rom,
@@ -133,33 +191,24 @@ class BilinearFormHYPERROM_deim(BilinearForm):
                                      elem_indices: Optional[ndarray] = None,
                                      **kwargs) -> ndarray:
         """
-        Extract local stiffness matrices in the reduced basis for specified elements.
-
-        This routine assembles the original bilinear form on each element
-        and returns an array of shape (n_elems, Nbfun, Nbfun), where Nbfun
-        is the number of local basis functions.
+        Extract element matrices for assembling over sampled mesh.
 
         Parameters
         ----------
         ubasis : Basis
-            Trial-space finite element basis (with restricted elements if
-            `elem_indices` is provided).
+            Basis for trial functions.
         vbasis : Basis, optional
-            Test-space finite element basis; defaults to `ubasis`.
-        elem_indices : ndarray of int, optional
-            Subset of element indices to restrict the basis via `with_elements`.
-        **kwargs
-            Extra keyword arguments forwarded to the form assembly.
+            Basis for test functions. If None, `ubasis` is used.
+        elem_indices : array_like of int, optional
+            Indices of elements to include in extraction.
+        **kwargs : dict
+            Additional keyword arguments for evaluating the bilinear form over each element.
 
         Returns
         -------
-        element_matrices : ndarray, shape (n_elems, Nbfun, Nbfun)
-            Local element stiffness matrices for each (restricted) element.
-
-        Raises
-        ------
-        ValueError
-            If trial/test bases have mismatched quadrature dimensions.
+        ndarray
+            Array of shape (n_elems, n_loc, n_loc) containing
+            the element stiffness matrices.
         """
         if vbasis is None:
             vbasis = ubasis
@@ -211,4 +260,3 @@ class BilinearFormHYPERROM_deim(BilinearForm):
         # Rearrange data from shape (Nbfun, Nbfun, n_elements) to (n_elements, Nbfun, Nbfun)
         element_matrices = local_data.transpose(2, 0, 1)
         return element_matrices
-

@@ -6,9 +6,9 @@ from scipy.linalg import qr
 
 class deim:
     """
-    Class to perform the Discrete Empirical Interpolation Method (DEIM) and its variants
-    for reducing the dimension of nonlinear force terms in a reduced order model (ROM)
-    within a finite element framework.
+    Class to perform the Discrete Empirical Interpolation Method (DEIM) for 
+    reducing the dimension of nonlinear force terms in a reduced order model 
+    (ROM) within a finite element framework.
     """
 
     def __init__(self, mesh, F_nl, V_sel, tol_f=1e-2, extra_modes=0):
