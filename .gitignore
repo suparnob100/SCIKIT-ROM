@@ -6,3 +6,4 @@ src/skrom/utils/old
 src/tests
 src/docs
 /.quarto/
+build/
