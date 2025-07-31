@@ -3,7 +3,7 @@ from skfem import BilinearForm
 @BilinearForm
 def a(u, v, w):
     """
-    Template for your problem’s bilinear form (or Jacobian in a nonlinear solver):
+    Template for your problem's bilinear form (or Jacobian in a nonlinear solver):
         ∫_Ω [your integrand here] dx
 
     Parameters:

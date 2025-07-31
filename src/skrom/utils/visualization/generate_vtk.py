@@ -1,7 +1,7 @@
 import numpy as np
 import shutil
 from pathlib import Path
-
+import os
 
 
 def visualize2D(u,basis):
@@ -141,17 +141,20 @@ def generate_vtk(
     [Author: Suparno Bhattacharyya]
     """
     base_dir = Path(out_dir)
-    if base_dir.exists():
-        shutil.rmtree(base_dir)
-    base_dir.mkdir()
+    # if base_dir.exists():
+    #     shutil.rmtree(base_dir)
+    # base_dir.mkdir()
+    os.makedirs(out_dir, exist_ok=True)
+
 
     for i in range(1, num_test + 1):
         idx = np.random.randint(len(LS_test))
         run_dir = base_dir / f"Test_{i}"
 
-        if run_dir.exists():
-            shutil.rmtree(run_dir)
-        run_dir.mkdir()
+        # if run_dir.exists():
+        #     shutil.rmtree(run_dir)
+        # run_dir.mkdir()
+        os.makedirs(run_dir, exist_ok=True)
 
         # write full-order solution
         save_vtk_solution(

@@ -22,7 +22,7 @@ def parameters(N_snap=32):
     """
     # Define parameter ranges: (min, max) for k_param and q_param
     nu = (0.2, 0.4)
-    E = (0,10)
+    E = (2,10)
     param_ranges = [E, nu]
     
     # Generate Sobol sequences for training and testing
