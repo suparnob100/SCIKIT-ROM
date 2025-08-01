@@ -3,7 +3,7 @@ from skfem import MeshHex, Basis, ElementVector, ElementHex1
 from skrom.fom.fem_utils import element2location, compute_basis_regions
 
 
-def domain_(lx = 10.0, ly = 1.0, lz = 1.0, factor = 6 ):
+def domain_(lx = 10.0, ly = 1.0, lz = 1.0, factor = 5 ):
     """
     Construct 1-D FEM domain for heat conduction.
 
