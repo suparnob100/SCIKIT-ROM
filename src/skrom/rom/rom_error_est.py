@@ -88,7 +88,7 @@ def compute_rom_error_metrics_flat(u, u_rom, K=None):
     u_r = np.array(u_rom)
     if u.shape != u_r.shape:
         raise ValueError("u and u_rom must have the same shape")
-    n_snap, n_space = u.shape
+    # n_snap, n_space = u.shape
     err = u - u_r
     metrics = {}
 
@@ -175,7 +175,7 @@ def plot_rom_error_diagnostics_flat(u, u_rom, rom_relative_error, rom_speed_up, 
     u   = np.array(u)
     u_r = np.array(u_rom)
 
-    n_snap, _ = u.shape
+    n_snap, *_ = u.shape
 
     # 1) scatter true vs. ROM
     fig, ax = plt.subplots()

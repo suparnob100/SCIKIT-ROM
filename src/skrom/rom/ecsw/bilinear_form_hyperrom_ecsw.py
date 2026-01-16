@@ -4,34 +4,66 @@ ECSW-based hyperreduction for finite element bilinear forms with element cluster
 This module provides hyperreduction of bilinear forms using Energy-Conserving 
 Sampling and Weighting (ECSW) combined with intelligent element clustering for 
 efficient reduced-order stiffness assembly. It achieves dramatic computational 
-speedups by:
-- Clustering elements by number of free DOFs for vectorized operations
-- Extracting and projecting element stiffness blocks onto reduced bases and weighing them
-- Assembling global reduced matrices via vectorized Einstein summation
+speedups by clustering elements by number of free DOFs for vectorized operations,
+extracting and projecting element stiffness blocks onto reduced bases with weights,
+and assembling global reduced matrices via vectorized Einstein summation.
 
-**TL;DR**: Enables substantial speedup in bilinear form assembly for ROMs while 
+TL;DR
+-----
+Enables substantial speedup in bilinear form assembly for ROMs while 
 preserving stability and energy conservation through intelligent element clustering
 and weighted assembly strategies.
 
-Author: Suparno Bhattacharyya
+Author
+------
+Suparno Bhattacharyya
 """
 
-from typing import Optional
+
+from typing import Optional, Any
+from types import MethodType
 from threading import Thread
 import numpy as np
 from numpy import ndarray
 from skfem.assembly.basis import Basis
 from skfem.assembly.form.form import FormExtraParams
-from skfem.assembly.basis import AbstractBasis
+from skfem.assembly.basis import AbstractBasis, FacetBasis
 from skfem.assembly.form.bilinear_form import BilinearForm  
 from numpy.typing import DTypeLike 
+
+
+
+def with_elements(self, elements: Optional[Any] = None) -> 'FacetBasis':
+    """
+    Return a similar basis on a subset of element indices.
+    
+    **TL;DR**: Creates a restricted FacetBasis containing only specified elements.
+    
+    Parameters
+    ----------
+    elements : Optional[Any], optional
+        Subset of element indices to restrict the basis to
+    
+    Returns
+    -------
+    FacetBasis
+        New FacetBasis instance restricted to specified elements
+    """
+    return type(self)(
+        self.mesh,
+        self.elem,
+        mapping=self.mapping,
+        quadrature=self.quadrature,
+        facets=elements,
+    )
+
 
 
 class BilinearFormHYPERROM_ecsw(BilinearForm):
     """
     ECSW-based hyperreduced bilinear form with element clustering for efficient assembly.
 
-    **TL;DR**: Dramatically accelerates bilinear form assembly by ~1000x through 
+    **TL;DR**: Dramatically accelerates bilinear form assembly substantially through 
     energy-conserving element clustering and weighted sampling, providing both 
     computational efficiency and numerical stability for real-time ROM applications.
 
@@ -39,76 +71,101 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
     Energy-Conserving Sampling and Weighting (ECSW) with intelligent element 
     clustering to achieve massive computational savings while preserving crucial 
     physical properties. The approach works through several key innovations:
-
-    This hyperreduction is particularly effective for problems where:
+    
+    - Element clustering by free DOF count for vectorized operations
+    - Energy-conserving weighted assembly preserving physical properties
+    - Efficient submatrix extraction using advanced NumPy indexing
+    - Vectorized Einstein summation for parallel element contributions
+    
+    The hyperreduction is particularly effective for problems where:
+    
     - Energy conservation is critical (structural dynamics, wave propagation)
-
     - Element distributions are relatively uniform (similar local DOF counts)
-
     - Computational stability is paramount for long-time integration
-
     - Real-time performance is required for control or optimization
 
     Parameters
     ----------
     form : callable
         The original bilinear form function to be hyperreduced. Should accept 
-        test and trial basis functions and return element-wise stiffness contributions.
+        test and trial basis functions and return element-wise stiffness contributions
     elem_weight : scalar or array_like of shape (n_elements,)
         Element-wise ECSW weights determining the contribution of each element 
         to the reduced assembly. Can be a single scalar applied to all elements 
-        or individual weights per element from ECSW analysis.
+        or individual weights per element from ECSW analysis
     ubasis : Basis
         Trial-space finite element basis containing full DOF count, element 
-        connectivity, and quadrature information for the original mesh.
+        connectivity, and quadrature information for the original mesh
     lob : ndarray of shape (n_free, r) or (n_full, r)
         Left (test) reduced basis matrix. Shape depends on whether free_dofs 
-        is provided - if so, basis is defined only on free DOFs.
+        is provided - if so, basis is defined only on free DOFs
     rob : ndarray of shape (n_free, r) or (n_full, r)
         Right (trial) reduced basis matrix with same shape requirements as lob.
-        Projects full-order solutions to the r-dimensional reduced space.
+        Projects full-order solutions to the r-dimensional reduced space
     vbasis : Basis, optional
         Test-space finite element basis. If None, defaults to ubasis for 
-        standard Galerkin formulations.
+        standard Galerkin formulations
     free_dofs : ndarray of int, optional
         Indices of global DOFs that are free (non-Dirichlet). If provided,
-        all reduced bases and operations are performed only on these DOFs.
+        all reduced bases and operations are performed only on these DOFs
     mean : ndarray, optional
         Mean snapshot vector for solution centering. Required if snapshot data 
-        was mean-subtracted during reduced basis construction.
+        was mean-subtracted during reduced basis construction
     nthreads : int, default=0
         Number of threads for parallel element matrix extraction. Zero means 
-        serial execution, positive values enable multi-threaded assembly.
+        serial execution, positive values enable multi-threaded assembly
     dtype : numpy.dtype, default=np.float64
-        Numerical precision for all computations and storage arrays.
+        Numerical precision for all computations and storage arrays
 
     Attributes
     ----------
-    lob, rob : ndarray
-        Left and right reduced basis matrices, possibly restricted to free DOFs.
+    lob : ndarray
+        Left reduced basis matrix, possibly restricted to free DOFs
+    rob : ndarray
+        Right reduced basis matrix, possibly restricted to free DOFs
     free_dofs : ndarray or None
-        Indices of free DOFs if Dirichlet boundary conditions are present.
+        Indices of free DOFs if Dirichlet boundary conditions are present
     mean : ndarray or None
-        Mean snapshot vector for solution centering and reconstruction.
+        Mean snapshot vector for solution centering and reconstruction
     r : int
-        Reduced dimension (number of reduced basis vectors).
+        Reduced dimension (number of reduced basis vectors)
     mapping : ndarray of int
         Mapping from full DOF indices to reduced free-DOF indices, with 
-        Dirichlet DOFs mapped to -1.
+        Dirichlet DOFs mapped to -1
     cluster_idx : list of ndarray
         Element indices grouped by number of free DOFs per element. Each entry 
-        contains indices of elements with the same free DOF count.
+        contains indices of elements with the same free DOF count
     order_cluster : list of ndarray
         Local DOF ordering within each cluster for efficient submatrix extraction.
-        Shape: (cluster_size, n_free_dofs_in_cluster).
+        Shape: (cluster_size, n_free_dofs_in_cluster)
     w_cluster : list of ndarray
-        ECSW weights corresponding to elements in each cluster.
-    R_test_free, R_trial_free : list of ndarray
-        Test and trial basis matrices restricted to free DOFs for each cluster.
-        Shape: (cluster_size, n_free_dofs, r).
+        ECSW weights corresponding to elements in each cluster
+    R_test_free : list of ndarray
+        Test basis matrices restricted to free DOFs for each cluster.
+        Shape: (cluster_size, n_free_dofs, r)
+    R_trial_free : list of ndarray
+        Trial basis matrices restricted to free DOFs for each cluster.
+        Shape: (cluster_size, n_free_dofs, r)
     unique_freedom : ndarray of int
-        Unique counts of free DOFs per element, determining the number of clusters.
+        Unique counts of free DOFs per element, determining the number of clusters
+    weight : ndarray
+        Array of ECSW weights
+    nonzero_elements : ndarray
+        Indices of elements with non-zero weights
+    ubasis_rom : Basis
+        Trial basis restricted to non-zero weight elements
+    vbasis_rom : Basis
+        Test basis restricted to non-zero weight elements
+    element_dofs : ndarray
+        Element-to-DOF connectivity for restricted mesh
+    free_indices : ndarray
+        Free DOF indices for each element
+    mask : ndarray of bool
+        Boolean mask indicating which DOFs are free in each element
+    n_freedom : ndarray of int
+        Number of free DOFs per element
     """
+
 
     def __init__(self, form, elem_weight, ubasis: Basis, lob, rob,
                  vbasis: Optional[Basis] = None, free_dofs: Optional[ndarray] = None,
@@ -117,28 +174,31 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         """
         Initialize hyperreduced bilinear form with ECSW weights and element clustering.
 
+        **TL;DR**: Sets up element clustering, DOF mapping, and reduced basis projections
+        for efficient hyperreduced assembly.
+
         Parameters
         ----------
         form : callable
-            The original bilinear form function to assemble local matrices.
+            The original bilinear form function to assemble local matrices
         elem_weight : scalar or ndarray
-            Weight(s) applied to each element during assembly from ECSW analysis.
+            Weight(s) applied to each element during assembly from ECSW analysis
         ubasis : Basis
-            Trial-space reduced basis with full DOF count and element mapping.
+            Trial-space reduced basis with full DOF count and element mapping
         lob : ndarray
-            Left reduced basis (test functions), shape matching `rob`.
+            Left reduced basis (test functions), shape matching `rob`
         rob : ndarray
-            Right reduced basis (trial functions), shape matching `lob`.
+            Right reduced basis (trial functions), shape matching `lob`
         vbasis : Basis, optional
-            Test-space basis; defaults to `ubasis` if None.
+            Test-space basis; defaults to `ubasis` if None
         free_dofs : ndarray of int, optional
-            Indices of non-Dirichlet DOFs. If None, all DOFs are treated as free.
+            Indices of non-Dirichlet DOFs. If None, all DOFs are treated as free
         mean : ndarray, optional
-            Mean vector removed from snapshots during basis computation.
+            Mean vector removed from snapshots during basis computation
         nthreads : int, default=0
-            Number of threads for parallel assembly operations.
+            Number of threads for parallel assembly operations
         dtype : data-type, default=np.float64
-            Data type for internal arrays and computed matrices.
+            Data type for internal arrays and computed matrices
         """
         super().__init__(form)
 
@@ -149,8 +209,12 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         self.mean = mean
         self.nthreads = nthreads
         self.dtype = dtype
+
+        if isinstance(ubasis, FacetBasis) and not hasattr(ubasis, "with_elements"):
+            ubasis.with_elements = MethodType(with_elements, ubasis)
+
         self.ubasis = ubasis
-        
+
         if vbasis is None:
             self.vbasis = ubasis
 
@@ -235,6 +299,7 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         This method constructs a crucial data structure that enables efficient 
         handling of Dirichlet boundary conditions in the reduced-order context. 
         The mapping allows the algorithm to:
+        
         - Identify which global DOFs are free (non-Dirichlet)
         - Map free DOFs to contiguous reduced basis indices [0, N_free-1]
         - Mark Dirichlet DOFs with sentinel value -1 for easy identification
@@ -244,13 +309,14 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         ----------
         basis : Basis
             Finite element basis object containing total DOF count and connectivity.
-            The basis.N attribute provides the total number of global DOFs.
+            The basis.N attribute provides the total number of global DOFs
 
         Returns
         -------
         mapping : ndarray of int, shape (N_full,)
             Integer array where mapping[i] gives the reduced-basis index of global 
-            DOF i, or -1 if DOF i is a Dirichlet (constrained) DOF.
+            DOF i, or -1 if DOF i is a Dirichlet (constrained) DOF
+            
         """
         N_full = basis.N
         if self.free_dofs is None:
@@ -300,14 +366,15 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         **kwargs : dict
             Additional keyword arguments passed to element extraction routines
             for controlling assembly behavior, such as material parameters or 
-            quadrature settings.
+            quadrature settings
 
         Returns
         -------
         K_reduced : ndarray of shape (r, r)
             Assembled reduced-order stiffness matrix ready for use in ROM systems.
             This matrix preserves the energy conservation properties of the 
-            full-order operator while enabling real-time evaluation.
+            full-order operator while enabling real-time evaluation
+        
         """
         element_matrices = self.extract_element_matrices_rom(self.ubasis_rom, self.vbasis_rom, elem_indices=self.nonzero_elements, **kwargs)
 
@@ -372,6 +439,7 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         ECSW weighting.
 
         The method supports both execution modes:
+        
         - **Serial Mode** (nthreads=0): Sequential element-by-element computation
         - **Parallel Mode** (nthreads>0): Multi-threaded parallel element processing
 
@@ -385,28 +453,29 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         ----------
         ubasis : Basis
             Trial-space finite element basis containing mesh connectivity,
-            quadrature points, and basis function evaluations.
+            quadrature points, and basis function evaluations
         vbasis : Basis, optional
             Test-space finite element basis. If None, defaults to ubasis 
-            for standard Galerkin formulations.
+            for standard Galerkin formulations
         elem_indices : array_like of int, optional
             Specific element indices to include in extraction. If None,
-            processes all elements in the hyperreduced mesh.
+            processes all elements in the hyperreduced mesh
         **kwargs : dict
             Additional keyword arguments passed to the bilinear form evaluation,
-            such as material parameters or other problem-specific data.
+            such as material parameters or other problem-specific data
 
         Returns
         -------
         element_matrices : ndarray of shape (n_elements, n_local_dofs, n_local_dofs)
             Array of local element stiffness matrices. Each element_matrices[e] 
-            contains the n_local_dofs × n_local_dofs stiffness matrix for element e.
+            contains the n_local_dofs × n_local_dofs stiffness matrix for element e
 
         Raises
         ------
         ValueError
             If trial and test bases have incompatible quadrature point counts,
-            indicating a mismatch in integration rules.
+            indicating a mismatch in integration rules
+            
         """
         if vbasis is None:
             vbasis = ubasis

@@ -132,7 +132,7 @@ class ProblemMixed(Problem):
         Compute reduced stiffness and mean-shift term.
         """
         # fetch reduced basis and mean
-        self.U, self.T_k = cls.V_sel.copy(), cls.mean.copy()
+        self.U, self.T_k = cls.V_sel.copy(), cls.train_ref.copy()
         # project full-order stiffness
         K_a = _ensure_csr(self.K_bilinear)
         self.K_r = self.U.T @ (K_a @ self.U)

@@ -197,8 +197,13 @@ class ProblemNonLinear(Problem):
             self.dirichlet_boundary_value,
             param,
             tol=1e-2,
-            maxit=50
+            maxit=50,
+            rhs_args=(param,)
         )
+
+            
+
+    
 
     def reduced_operators(self, u_rom, param):
         """
@@ -244,7 +249,7 @@ class ProblemNonLinear(Problem):
         """
         if cls.cur_itr == 0:
             # initialize ROM state
-            self.T_ref, self.U, self.n_sel = cls.mean, cls.V_sel, cls.n_sel
+            self.T_ref, self.U, self.n_sel = cls.train_ref, cls.V_sel, cls.n_sel
             load_domain(self)
             
             self.u0_rom = np.full(self.n_sel, 500.0)
@@ -307,7 +312,7 @@ class ProblemNonLinear(Problem):
         """
         if cls.cur_itr == 0:                                   # first snapshot → build once
             # ROM data & weights
-            self.U, self.T_ref, self.n_sel, self.weights = cls.V_sel, cls.mean, cls.n_sel, cls.z
+            self.U, self.T_ref, self.n_sel, self.weights = cls.V_sel, cls.train_ref, cls.n_sel, cls.z
 
             load_domain(self)                                  # mesh, basis, DOFs
             self.R, self.J_form = self.linear_forms()[0], self.bilinear_forms()[0]
@@ -375,7 +380,7 @@ class ProblemNonLinear(Problem):
         """
         if cls.cur_itr == 0:                                   # first snapshot → build once
             # ROM data & weights
-            self.U, self.T_ref, self.n_sel, self.weights = cls.V_sel, cls.mean, cls.n_sel, cls.z
+            self.U, self.T_ref, self.n_sel, self.weights = cls.V_sel, cls.train_ref, cls.n_sel, cls.z
             self.sampled_rows = cls.sampled_rows
             self.deim_mat = cls.deim_mat
 

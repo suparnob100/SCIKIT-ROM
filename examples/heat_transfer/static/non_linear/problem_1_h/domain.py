@@ -5,7 +5,7 @@ from skrom.fom.fem_utils import element2location, compute_basis_regions
 
 def domain_(
     rx=0.5,
-    factor=12.3,
+    factor=14,
     left_bc=0.0,
     right_bc=0.5,
     dirichlet_boundary_value=573.15,

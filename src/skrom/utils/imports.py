@@ -36,7 +36,7 @@ from matplotlib import cm  # Colormap functions
 from matplotlib.ticker import LinearLocator  # Tick locator for axes
 from matplotlib.ticker import MaxNLocator  # Max number of ticks locator
 from mpl_toolkits.mplot3d import Axes3D  # 3D plotting tools
-import sci_mplstyle_package  # Custom matplotlib styles
+# import sci_mplstyle_package  # Custom matplotlib styles
 from pyamg import smoothed_aggregation_solver  # Algebraic multigrid solver
 from scipy.sparse import csc_matrix  # Compressed sparse column matrix format
 from scipy.sparse.linalg import splu, spilu, LinearOperator, cg  # Sparse direct and iterative solvers
@@ -49,7 +49,17 @@ from pyDOE import lhs  # Latin Hypercube design of experiments
 from pathlib import Path  # Filesystem path abstraction
 from scipy.linalg import qr  # QR decomposition
 from scipy.sparse import issparse, csr_matrix
-             
+
+def _petsc_is_available() -> bool:
+    try:
+        import petsc4py  # noqa: F401
+        from petsc4py import PETSc  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+print(f"PETSc available: {_petsc_is_available()}")
+
 # Apply a custom plotting style for publication-quality figures
 #plt.style.use(os.path.join(desired_path, 'utils/plot_files/publication.mplstyle'))
 

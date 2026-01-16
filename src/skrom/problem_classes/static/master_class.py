@@ -1,22 +1,25 @@
 """
-Static reduced-order modeling (ROM) framework for efficient numerical simulation.
+Static reduced-order modeling (ROM) framework.
 
-This module provides a complete framework for reduced-order modeling including:
-- Dynamic import of problem definitions via abstract base classes
-- Full-order FEM solver (FOM) for generating training snapshots
-- Offline snapshot generator for building reduced bases
-- Online ROM evaluator with performance metrics
-- Support for hyper-reduction techniques (DEIM, ECSW)
+TL;DR
+-----
+Runs an offline full-order FEM snapshot stage and an online reduced-order solve stage,
+with optional hyper-reduction (DEIM, ECSW) to lower cost while tracking error and speed.
 
-**TL;DR**: Enables fast approximation of expensive PDE solutions by learning 
-from precomputed snapshots, achieving significant computational speedups while 
-maintaining acceptable accuracy.
+The module defines:
+- a problem interface based on an abstract base class
+- a registry for problem classes and a factory to instantiate them
+- an offline workflow that runs full-order solves to generate snapshots
+- an online workflow that runs ROM and computes error and timing metrics
+- hooks for hyper-reduction workflows based on DEIM and ECSW
 
-Authors: Suparno Bhattacharyya, Ali Hamza Abidi Syed
+Notes
+-----
+Authors: Suparno Bhattacharyya; Ali Hamza Abidi Syed
 """
 
 from pathlib import Path
-import os
+import os,re,json,time,hashlib,tempfile
 import numpy as np
 import time
 from abc import ABC, abstractmethod
@@ -42,13 +45,15 @@ else:
 # ─────────────────────────────────────────────────────────────
 class Problem(ABC):
     """
-    Abstract base class for parameterized PDE problems with affine decomposition.
+    Interface for parameterized problems used by the ROM workflow.
 
-    **TL;DR**: Defines the interface that all ROM problems must implement,
-    ensuring consistent structure for domain setup, assembly, and solving.
-
-    This abstract class serves as a blueprint for defining parameterized partial 
-    differential equation problems suitable for reduced-order modeling. 
+    The class defines the required methods for:
+    - mesh and basis setup
+    - affine components of bilinear and linear forms
+    - parameter-dependent coefficient evaluation
+    - sampling of the parameter space
+    - full-order and reduced-order solvers
+    - hyper-reduced solvers based on DEIM and ECSW
     """
     @abstractmethod
     def domain(self):
@@ -102,20 +107,22 @@ PROBLEM_REGISTRY: Dict[str, Type[Problem]] = {}
 
 def register_problem(name: str):
     """
-    Decorator to register a problem class in the global registry.
-
-    **TL;DR**: Allows automatic discovery and instantiation of problem classes
-    by name, enabling modular problem definitions.
+    Register a problem class under a string key.
 
     Parameters
     ----------
     name : str
-        Unique identifier for the problem class.
+        Registry key for the problem class.
 
     Returns
     -------
-    decorator : callable
-        Decorator function that registers the class.
+    deco : callable
+        Decorator that adds the class to ``PROBLEM_REGISTRY`` and returns it.
+
+    Notes
+    -----
+    The registry supports dynamic selection of a problem class based on the
+    working directory name.
     """
     def deco(cls: Type[Problem]) -> Type[Problem]:
         PROBLEM_REGISTRY[name] = cls
@@ -125,25 +132,22 @@ def register_problem(name: str):
 
 def get_problem(name: str) -> Problem:
     """
-    Instantiate a registered problem class by name.
-
-    **TL;DR**: Factory function to create problem instances from the registry
-    using string identifiers.
+    Instantiate a registered problem class.
 
     Parameters
     ----------
     name : str
-        Name of the registered problem class.
+        Registry key used in ``PROBLEM_REGISTRY``.
 
     Returns
     -------
     problem_instance : Problem
-        Instantiated problem object.
+        Instance of the registered class.
 
     Raises
     ------
     ValueError
-        If the requested problem name is not found in the registry.
+        If ``name`` is not present in the registry.
     """
     try:
         return PROBLEM_REGISTRY[name]()
@@ -153,22 +157,19 @@ def get_problem(name: str) -> Problem:
 
 def assign_properties(prob: Problem) -> Tuple:
     """
-    Extract and organize all problem methods and properties.
-
-    **TL;DR**: Convenience function to unpack all problem components into 
-    a structured tuple for easy access.
+    Collect callable handles from a problem instance.
 
     Parameters
     ----------
     prob : Problem
-        Problem instance to extract properties from.
+        Problem instance.
 
     Returns
     -------
     properties : tuple
-        Tuple containing (parameters, bilinear_forms, linear_forms, domain,
-        properties, fom_solver, rom_solver, hyper_deim_solver, hyper_ecsw_solver).
-
+        Tuple with:
+        (parameters, bilinear_forms, linear_forms, domain, properties,
+        fom_solver, rom_solver, hyper_deim_solver, hyper_ecsw_solver).
     """
     parameters        = prob.parameters
     a                 = prob.bilinear_forms()
@@ -194,52 +195,37 @@ def assign_properties(prob: Problem) -> Tuple:
 # ─────────────────────────────────────────────────────────────
 class fom_simulation:
     """
-    Offline snapshot generator using full-order finite element method.
+    Offline snapshot generation workflow.
 
-    **TL;DR**: Generates training data by solving the full-order system at 
-    multiple parameter values, storing solutions and timing information for 
-    later ROM construction.
-
-    This class orchestrates the offline phase of ROM construction by:
-    1. Sampling parameter space
-    2. Solving full-order systems at each parameter
-    3. Recording solutions and computational times
-    4. Computing mean solution for centering
-    5. Saving all data for ROM construction
-
-    The generated snapshots form the columns of the snapshot matrix used 
-    to build the reduced basis via proper orthogonal decomposition (POD) 
-    or other dimensionality reduction techniques.
+    The workflow:
+    - draws parameter samples
+    - runs full-order solves
+    - stores solutions and solve times
+    - computes a reference field for centering
+    - saves outputs to a ROM_data directory
 
     Attributes
     ----------
     num_snapshots : int
-        Number of parameter samples/snapshots to generate.
+        Number of parameter samples.
     param_list : array_like
-        Parameter vectors for snapshot generation.
+        Parameter samples.
     fos_solutions : list of ndarray
-        Full-order solutions at each parameter value.
+        Full-order solutions for each parameter sample.
     fos_time : list of float
-        Solution times for each full-order solve.
-    mean : ndarray
-        Mean solution used for centering the snapshot matrix.
-
-    Examples
-    --------
-    >>> sim = fom_simulation(num_snapshots=50)
-    >>> sim.run_simulation()
-    >>> # Solutions and timing data saved to ROM_data/ directory
+        Solve time for each full-order solve.
+    train_ref : ndarray
+        Mean field computed from training snapshots.
     """
 
     def __init__(self, num_snapshots: int = 32):
         """
-        Initialize simulation parameters and bind problem methods.
+        Initialize the offline workflow.
 
         Parameters
         ----------
-        num_snapshots : int, default=32
-            Number of snapshots to generate for ROM training. More snapshots
-            generally improve ROM accuracy but increase offline computational cost.
+        num_snapshots : int, optional
+            Number of snapshots used in the offline run. Default is 32.
         """
         # Bind prob methods
         prob = get_problem(PROBLEM)
@@ -274,56 +260,199 @@ class fom_simulation:
         self.fos_solutions = []
         self.fos_time      = []
 
+
+
     def run_simulation(self) -> None:
         """
-        Execute snapshot generation and save results.
+        Run full-order solves and save offline outputs.
 
-        **TL;DR**: Main execution method that solves FOM at all parameter values,
-        records timings, and saves data required for ROM derivation to disk.
-
-        This method performs the complete offline phase:
-        1. Iterates through all parameter values
-        2. Solves full-order system at each parameter
-        3. Records solution time and stores solution
-        4. Computes mean solution over training set
-        5. Saves all new attributes to ROM_data directory
-
-        The timing information is crucial for computing speedup metrics
-        during online ROM evaluation.
-
-        Notes
-        -----
-        Solutions are deep-copied to avoid memory aliasing issues.
-        Only attributes created after initialization are saved to disk
-        to avoid redundant storage of problem methods.
+        Adds:
+        - per-sample checkpointing to .npz
+        - resume: if checkpoint exists, load it and skip the solve
+        - long-path-safe filenames (Windows): hash-first + fallback to hash-only
+        - crash-safe writes (atomic replace)
+        - corrupt checkpoint handling (recompute + overwrite)
         """
+
+        # reset in-memory containers (important when re-running in notebooks)
+        self.fos_solutions = []
+        self.fos_time = []
+
+        cur_dir = os.getcwd()
+
+        # keep directory name short to reduce Windows path length risk
+        ckpt_dir = Path(cur_dir) / "ckpt"
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+
+        # ---------- helpers ----------
+        def _safe_token(s: str, maxlen: int) -> str:
+            s = re.sub(r"\s+", "", s)
+            s = re.sub(r"[^0-9A-Za-z,.\-+eE_]", "_", s)
+            return s[:maxlen]
+
+        def _problem_tag() -> str:
+            return (
+                getattr(self, "PROBLEM_NAME", None)
+                or getattr(self, "problem_name", None)
+                or self.__class__.__name__
+            )
+
+        def _param_signature(param):
+            """
+            Returns:
+            preview_token (short, human-readable),
+            hash10 (stable),
+            stored_param (array or string array for saving inside .npz)
+            """
+            try:
+                arr = np.asarray(param, dtype=float).ravel()
+                b = arr.tobytes()
+                preview = ",".join(f"{x:.12g}" for x in arr[:6])
+                if arr.size > 6:
+                    preview += f",...n{arr.size}"
+                stored = arr
+            except Exception:
+                js = json.dumps(param, sort_keys=True, default=str)
+                b = js.encode("utf-8")
+                preview = js
+                stored = np.array([js], dtype="U")
+
+            h10 = hashlib.sha1(b).hexdigest()[:10]
+            return preview, h10, stored
+
+        def _ckpt_path(param) -> Path:
+            preview, h10, _ = _param_signature(param)
+            prob = _safe_token(_problem_tag(), maxlen=20)
+
+            # Keep preview very short; uniqueness comes from hash
+            preview = _safe_token(preview, maxlen=30)
+
+            # Option 1: slightly descriptive
+            name1 = f"fos_{prob}_p{preview}_h{h10}.npz"
+            path1 = ckpt_dir / name1
+
+            # Option 2: hash-only (short path fallback)
+            name2 = f"fos_{prob}_h{h10}.npz"
+            path2 = ckpt_dir / name2
+
+            # Windows long path guard
+            if os.name == "nt":
+                # keep headroom below 260
+                if len(str(path1)) >= 240:
+                    return path2
+
+            return path1
+
+        def _atomic_save_npz(path: Path, payload: dict):
+            # IMPORTANT: temp file must end with ".npz" (np.savez appends otherwise)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                dir=str(path.parent),
+                prefix=path.stem + "_",
+                suffix=".npz",
+                delete=False,
+            ) as tf:
+                tmp_name = tf.name
+
+            try:
+                np.savez_compressed(tmp_name, **payload)
+                os.replace(tmp_name, str(path))  # atomic on same filesystem
+            finally:
+                if os.path.exists(tmp_name):
+                    try:
+                        os.remove(tmp_name)
+                    except OSError:
+                        pass
+
+        def _save_solution(path: Path, sol, param, elapsed: float, snap_index: int):
+            _, _, param_store = _param_signature(param)
+
+            payload = {
+                "snap_index": np.array([snap_index], dtype=np.int64),
+                "solve_time": np.array([elapsed], dtype=float),
+                "param": param_store,
+            }
+
+            if isinstance(sol, tuple):
+                payload["nsol"] = np.array([len(sol)], dtype=np.int32)
+                for j, x in enumerate(sol):
+                    payload[f"sol{j}"] = np.asarray(x)
+            else:
+                payload["nsol"] = np.array([1], dtype=np.int32)
+                payload["sol0"] = np.asarray(sol)
+
+            _atomic_save_npz(path, payload)
+
+        def _load_solution(path: Path):
+            with np.load(path, allow_pickle=False) as data:
+                nsol = int(data["nsol"][0]) if "nsol" in data.files else 1
+                t = float(data["solve_time"][0]) if "solve_time" in data.files else np.nan
+                if nsol == 1:
+                    sol = data["sol0"]
+                else:
+                    sol = tuple(data[f"sol{j}"] for j in range(nsol))
+            return sol, t
+
+        # ---------- main loop ----------
         for i, param in enumerate(self.param_list):
             print(f"Snap {i+1}/{len(self.param_list)} params={param}")
             self.cur_itr = i
 
-            # Time the FOM solve
-            t0 = time.perf_counter()
-            sol = self.fom_solver(cls=self, param=param)
-            self.fos_time.append(time.perf_counter() - t0)
+            path = _ckpt_path(param)
 
-            # Store solution copy
+            if path.exists():
+                try:
+                    sol, t_saved = _load_solution(path)
+                    self.fos_time.append(t_saved)
+                except Exception:
+                    # corrupt/partial file -> delete and recompute
+                    try:
+                        path.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+
+                    t0 = time.perf_counter()
+                    sol = self.fom_solver(cls=self, param=param)
+                    elapsed = time.perf_counter() - t0
+                    self.fos_time.append(elapsed)
+                    _save_solution(path, sol, param, elapsed, snap_index=i)
+            else:
+                t0 = time.perf_counter()
+                sol = self.fom_solver(cls=self, param=param)
+                elapsed = time.perf_counter() - t0
+                self.fos_time.append(elapsed)
+                _save_solution(path, sol, param, elapsed, snap_index=i)
+
+            # store solution copy (in-memory)
             if isinstance(sol, tuple):
                 self.fos_solutions.append(tuple(np.copy(x) for x in sol))
             else:
                 self.fos_solutions.append(np.copy(sol))
 
-        # Convert to array and compute mean over training set
-        self.fos_solutions = np.array(self.fos_solutions)
-        self.mean = np.mean(self.fos_solutions[self.train_mask], axis=0)
+        # ---------- convert + mean over training subset ----------
+        if len(self.fos_solutions) == 0:
+            return
 
-        # Persist new attributes to disk
+        first = self.fos_solutions[0]
+        if isinstance(first, tuple):
+            self.fos_solutions = np.array(self.fos_solutions, dtype=object)
+
+            train_ids = np.where(self.train_mask)[0]
+            ncomp = len(first)
+            train_ref = []
+            for j in range(ncomp):
+                stack_j = np.stack([self.fos_solutions[k][j] for k in train_ids], axis=0)
+                train_ref.append(np.mean(stack_j, axis=0))
+            self.train_ref = tuple(train_ref)
+        else:
+            self.fos_solutions = np.asarray(self.fos_solutions)
+            self.train_ref = np.mean(self.fos_solutions[self.train_mask], axis=0)
+
+        # ---------- Persist new attributes to disk ----------
         new = set(vars(self)) - self._baseline_attrs
-        save_dict = {
-            k: getattr(self, k)
-            for k in new if not k.startswith("_")
-        }
-        cur_dir = os.getcwd()
+        save_dict = {k: getattr(self, k) for k in new if not k.startswith("_")}
         rom_data_gen(save_dict, cur_dir)
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -331,67 +460,59 @@ class fom_simulation:
 # ─────────────────────────────────────────────────────────────
 class rom_simulation:
     """
-    Online ROM evaluator with error analysis and performance metrics.
+    Online ROM evaluation workflow.
 
-    **TL;DR**: Evaluates ROM performance by comparing reduced-order solutions 
-    against full-order references, computing error percentages and computational 
-    speedups.
-
-    This class handles the online phase of ROM evaluation by:
-    1. Loading precomputed ROM data (snapshots, basis, parameters)
-    2. Solving reduced-order systems at test parameters
-    3. Reconstructing full-order solutions from ROM coefficients
-    4. Computing error metrics and speedup ratios
-    5. Supporting both standard Galerkin ROM and hyper-reduced variants
-
-    The class provides comprehensive performance analysis including relative 
-    errors and computational speedups, essential for validating ROM accuracy 
-    and efficiency.
+    The workflow:
+    - loads ROM_data outputs from disk
+    - selects test parameters and reference full-order solutions
+    - runs ROM solvers and reconstructs full fields
+    - computes relative error and time ratio metrics
+    - supports hyper-reduced solvers based on DEIM and ECSW
 
     Attributes
     ----------
     V_sel : ndarray
-        Reduced basis matrix of shape (n_dofs, n_modes).
+        Basis matrix used for reconstruction.
     n_sel : int
-        Number of ROM modes/basis functions.
+        Mode count used by the ROM.
     param_list_test : array_like
-        Test parameter values for ROM evaluation.
+        Test parameter samples.
     rom_error : list of float
-        Relative error percentages for each test case.
+        Relative error values in percent for each test case.
     speed_up : list of float
-        Computational speedup ratios (FOM_time / ROM_time).
+        Time ratios computed as (full-order time) / (ROM time).
     """
 
     def __init__(
-        self, mean=None, fos_solutions=None,
+        self, train_ref=None, test_ref=None, fos_solutions=None,
         train_mask=None, test_mask=None,
         V_sel=None, n_sel=None, N_rom_snap=None
     ):
         """
-        Initialize ROM simulation with data and basis information.
+        Initialize the online workflow and load ROM_data outputs.
 
         Parameters
         ----------
-        mean : ndarray, optional
-            Mean snapshot for solution centering. If None, loaded from disk.
+        train_ref : ndarray, optional
+            Reference field used for centering during training.
+        test_ref : ndarray, optional
+            Reference field used for reconstruction on the test set.
         fos_solutions : ndarray, optional
-            Full-order snapshot matrix. If None, loaded from disk.
+            Full-order snapshots. If None, data are loaded from disk.
         train_mask : array_like of bool, optional
-            Training parameter mask. If None, loaded from disk.
+            Training mask. If None, data are loaded from disk.
         test_mask : array_like of bool, optional
-            Test parameter mask. If None, loaded from disk.
+            Test mask. If None, data are loaded from disk.
         V_sel : ndarray, optional
-            Reduced basis matrix of shape (n_dofs, n_modes).
+            Basis matrix used in reconstruction.
         n_sel : int, optional
-            Number of ROM modes to use.
+            Mode count used by the ROM.
         N_rom_snap : int, optional
-            Number of ROM test cases to run. If None, uses all test parameters.
+            Test case count evaluated in the run. If None, uses all test cases.
 
         Notes
         -----
-        If data parameters are None, they will be loaded from the ROM_data
-        directory. The V_sel basis matrix is typically computed via POD
-        on the mean-centered snapshot matrix.
+        The initializer loads ``ROM_data`` from the current working directory.
         """
         # Bind prob methods
         prob = get_problem(PROBLEM)
@@ -412,11 +533,28 @@ class rom_simulation:
         rom_dir = os.path.join(cur_dir, "ROM_data")
         load_rom_data(self, rom_dir)
 
+        if train_ref is not None:
+            self.train_ref = train_ref
+
+        if test_ref is not None:
+            self.test_ref = test_ref
+        else:
+            self.test_ref = self.train_ref
+
+        if fos_solutions is not None:
+            self.fos_solutions = fos_solutions
+
+        if train_mask is not None:
+            self.train_mask = train_mask
+        
+        if test_mask is not None:
+            self.test_mask = test_mask
+
         # Prepare test/training splits
         self.param_list_test = self.param_list[self.test_mask]
         self.fos_test_data   = self.fos_solutions[self.test_mask]
         self.fos_test_time   = np.asarray(self.fos_time)[self.test_mask]
-        self.sol_train_ms    = self.fos_solutions[self.train_mask] - self.mean
+        self.sol_train_ms    = self.fos_solutions[self.train_mask] - self.train_ref
 
         # Store basis info
         self.V_sel      = V_sel
@@ -429,24 +567,20 @@ class rom_simulation:
 
     def run_rom_simulation(self):
         """
-        Execute ROM evaluation and compute performance metrics.
+        Run ROM evaluation on the test set.
 
-        **TL;DR**: Runs ROM at test parameters, reconstructs solutions, and 
-        computes error percentages and speedup ratios versus full-order model.
-
-        This method performs the complete ROM evaluation:
-        1. Iterates through test parameter values
-        2. Solves reduced-order system (much faster than FOM)
-        3. Reconstructs full-order solution: u_ROM = V * u_reduced + mean
-        4. Computes relative error: ||u_FOM - u_ROM|| / ||u_FOM|| * 100%
-        5. Computes speedup ratio: t_FOM / t_ROM
+        The method:
+        - runs the reduced solver for each test parameter
+        - reconstructs a full field from reduced coordinates
+        - computes relative error in percent
+        - computes time ratio (full-order time) / (ROM time)
 
         Returns
         -------
         rom_error : list of float
-            Relative error percentages for each test parameter.
+            Relative error values in percent.
         speed_up : list of float
-            Computational speedup ratios for each test parameter.
+            Time ratios for each test case.
         """
         self.speed_up     = []
         self.rom_error    = []
@@ -459,11 +593,24 @@ class rom_simulation:
             # Time the ROM solve
             t0 = time.perf_counter()
             sol_red_ = self.rom_solver(cls=self, param=param)
-            sol_rom = reconstruct_solution(sol_red_, self.V_sel, self.mean)
-            dt = time.perf_counter() - t0
 
+            if self.test_ref is not None:
+
+                if len(self.test_ref.shape)==3:
+                    sol_rom = reconstruct_solution(sol_red_, self.V_sel, self.test_ref[i])
+                else:
+                    sol_rom = reconstruct_solution(sol_red_, self.V_sel, self.test_ref)
+
+            dt = time.perf_counter() - t0
             # Compute error & speed-up
             sol_fos = self.fos_test_data[i]
+
+            if sol_rom.shape != sol_fos.shape and sol_rom.ndim == 2 and sol_rom.T.shape == sol_fos.shape:
+                sol_rom = sol_rom.T
+
+            if sol_rom.shape != sol_fos.shape:
+                raise ValueError(f"shape mismatch: fos{sol_fos.shape}, hyper{sol_rom.shape}")
+            
             err   = 100 * np.linalg.norm(sol_fos - sol_rom) \
                     / np.linalg.norm(sol_fos)
             speed = self.fos_test_time[i] / dt
@@ -476,29 +623,19 @@ class rom_simulation:
     
     def run_hyper_rom_simulation_ecsw(self, z):
         """
-        Execute ECSW hyper-ROM evaluation with performance analysis.
-
-        **TL;DR**: Runs Element-based Empirical Cubature in Strongly Weighted 
-        (ECSW) hyper-reduced model, achieving further speedups over standard ROM
-        by reducing integration costs.
-
-        ECSW hyper-reduction reduces computational cost by integrating the 
-        weak form only over a weighted subset of elements, rather than the 
-        full domain. This is particularly effective for problems where the 
-        solution has localized features.
+        Run ECSW hyper-ROM evaluation on the test set.
 
         Parameters
         ----------
         z : array_like
-            Element weight vector for ECSW hyper-reduction. Elements with 
-            larger weights contribute more to the reduced integration.
+            Element weight vector used by the ECSW solver.
 
         Returns
         -------
         hyper_rom_error : list of float
-            Relative error percentages versus full-order solutions.
+            Relative error values in percent.
         hyper_speed_up : list of float
-            Computational speedup ratios versus full-order model.
+            Time ratios for each test case.
         """
         self.hyper_speed_up    = []
         self.hyper_rom_error   = []
@@ -507,49 +644,60 @@ class rom_simulation:
         self.z            = z
 
         for i, param in enumerate(self.param_list_test[:self.N_rom_snap]):
-            print(f"Snap {i+1}/{len(self.param_list)} params={param}")
+            print(f"Snap {i+1}/{len(self.param_list_test)} params={param}")
             self.cur_itr = i
 
             # Time the hyper-ROM solve + reconstruction
             t0 = time.perf_counter()
             sol_red_ = self.hyper_rom_solver_ecsw(cls=self, param=param)
-            sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.mean)
+
+            if len(self.test_ref.shape)==3:
+                sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.test_ref[i])
+            else:
+                sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.test_ref)
+
+
             dt = time.perf_counter() - t0
 
             # record speed-up and solution
             self.hyper_speed_up.append(self.fos_test_time[i] / dt)
-            self.hyper_rom_solutions.append(sol_hyper.copy())
 
             # compute and record error
             sol_fos = self.fos_test_data[i]
+
+            if sol_hyper.shape != sol_fos.shape and sol_hyper.ndim == 2 and sol_hyper.T.shape == sol_fos.shape:
+                sol_hyper = sol_hyper.T
+
+            if sol_hyper.shape != sol_fos.shape:
+                raise ValueError(f"shape mismatch: fos{sol_fos.shape}, hyper{sol_hyper.shape}")
+
+            self.hyper_rom_solutions.append(sol_hyper.copy())
+
             err = 100 * np.linalg.norm(sol_fos - sol_hyper) / np.linalg.norm(sol_fos)
             self.hyper_rom_error.append(err)
 
         return self.hyper_rom_error, self.hyper_speed_up
 
+
     def run_hyper_rom_simulation_deim(self, z, deim_mat, sampled_rows):
         """
-        Execute DEIM hyper-ROM evaluation with performance analysis.
-
-        **TL;DR**: Runs Discrete Empirical Interpolation Method (DEIM) 
-        hyper-reduction for efficient handling of nonlinear terms by 
-        interpolation at selected points.
+        Run DEIM hyper-ROM evaluation on the test set.
 
         Parameters
         ----------
         z : array_like
-            Weight vector for hyper-reduction stored for reference.
+            Weight vector stored on the instance.
         deim_mat : ndarray
-            DEIM interpolation matrix computed offline.
+            Interpolation matrix used by the DEIM workflow.
         sampled_rows : array_like of int
-            Indices of degrees of freedom used as DEIM interpolation points.
+            Indices of sampled degrees of freedom.
 
         Returns
         -------
         hyper_rom_error : list of float
-            Relative error percentages versus full-order solutions.
+            Relative error values in percent.
         hyper_speed_up : list of float
-            Computational speedup ratios versus full-order model.
+            Time ratios for each test case.
         """
         self.hyper_speed_up    = []
         self.hyper_rom_error   = []
@@ -566,7 +714,12 @@ class rom_simulation:
             # Time the hyper-ROM solve + reconstruction
             t0 = time.perf_counter()
             sol_red_ = self.hyper_rom_solver_deim(cls=self, param=param)
-            sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.mean)
+
+            if len(self.test_ref.shape)==3:
+                sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.test_ref[i])
+            else:
+                sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.test_ref)
+
             dt = time.perf_counter() - t0
 
             # record speed-up and solution
@@ -575,6 +728,14 @@ class rom_simulation:
 
             # compute and record error
             sol_fos = self.fos_test_data[i]
+
+            if sol_hyper.shape != sol_fos.shape and sol_hyper.ndim == 2 and sol_hyper.T.shape == sol_fos.shape:
+                sol_hyper = sol_hyper.T
+
+            if sol_hyper.shape != sol_fos.shape:
+                raise ValueError(f"shape mismatch: fos{sol_fos.shape}, hyper{sol_hyper.shape}")
+            
+            
             err = 100 * np.linalg.norm(sol_fos - sol_hyper) / np.linalg.norm(sol_fos)
             self.hyper_rom_error.append(err)
 

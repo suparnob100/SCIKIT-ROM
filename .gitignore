@@ -1,9 +1,9 @@
 #tests
-tests/computational_mechanics/static/non_linear/problem_2_h/ROM_data
-tests/computational_mechanics/static/linear/problem_1/ROM_data
+tests/
 old/
 src/skrom/utils/old
 src/tests
 src/docs
 /.quarto/
 build/
+examples/heat_transfer/dynamic/problem_3D_printing

@@ -10,13 +10,16 @@ src/skrom.egg-info/requires.txt
 src/skrom.egg-info/top_level.txt
 src/skrom/fom/__init__.py
 src/skrom/fom/fem_utils.py
+src/skrom/fom/fem_utils_old.py
 src/skrom/problem_classes/__init__.py
 src/skrom/problem_classes/static/__init__.py
 src/skrom/problem_classes/static/master_class.py
+src/skrom/problem_classes/static/master_class_parallel.py
 src/skrom/rom/__init__.py
 src/skrom/rom/bilinear_form_rom.py
 src/skrom/rom/linear_form_rom.py
 src/skrom/rom/rom_error_est.py
+src/skrom/rom/rom_error_est_t.py
 src/skrom/rom/rom_utils.py
 src/skrom/rom/deim/__init__.py
 src/skrom/rom/deim/bilinear_form_hyperrom_deim.py
@@ -40,10 +43,6 @@ src/skrom/utils/__init__.py
 src/skrom/utils/imports.py
 src/skrom/utils/dynamics/__init__.py
 src/skrom/utils/dynamics/integrators.py
-src/skrom/utils/dynamics/newmark_beta.py
-src/skrom/utils/old/__init__.py
-src/skrom/utils/old/integrators.py
-src/skrom/utils/old/rom_utils_old.py
 src/skrom/utils/reduced_basis/__init__.py
 src/skrom/utils/reduced_basis/svd.py
 src/skrom/utils/visualization/__init__.py

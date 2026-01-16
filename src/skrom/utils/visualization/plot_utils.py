@@ -187,3 +187,92 @@ def plot_ecsw_weights_3d(
     plt.tight_layout()
     plt.show()
     return fig, ax
+
+
+
+def barcode_plot(
+    training_params,
+    testing_params,
+    *,
+    x_min=None,
+    x_max=None,
+    dim=0,
+    sort=True,
+    clip_to_range=True,
+    mode="stack",          # "stack" or "overlap"
+    test_offset=1,      # useful when mode="overlap"
+    bar_size=18,
+    bar_width=2.5,
+    figsize=(9, 2.0),
+    ax=None,
+):
+    def _to_1d(p):
+        p = np.asarray(p)
+        if p.ndim == 1:
+            return p
+        if p.ndim == 2:
+            if not (0 <= dim < p.shape[1]):
+                raise ValueError(f"dim={dim} out of bounds for params with shape {p.shape}")
+            return p[:, dim]
+        raise ValueError(f"Expected 1D or 2D params, got shape {p.shape}")
+
+    train = _to_1d(training_params)
+    test  = _to_1d(testing_params)
+
+    if sort:
+        train = np.sort(train)
+        test  = np.sort(test)
+
+    all_vals = np.concatenate([train, test]) if (train.size + test.size) else np.array([0.0])
+    data_min = float(np.nanmin(all_vals))
+    data_max = float(np.nanmax(all_vals))
+
+    if x_min is None and x_max is None:
+        x_min_, x_max_ = data_min, data_max
+    else:
+        x_min_ = data_min if x_min is None else float(x_min)
+        x_max_ = data_max if x_max is None else float(x_max)
+
+    if x_min_ > x_max_:
+        raise ValueError(f"x_min ({x_min_}) must be <= x_max ({x_max_})")
+
+    if clip_to_range:
+        train = train[(train >= x_min_) & (train <= x_max_)]
+        test  = test[(test  >= x_min_) & (test  <= x_max_)]
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+
+    if mode == "stack":
+        y_tr, y_te = 0.0, 1.0
+        ax.set_yticks([y_tr, y_te])
+        ax.set_yticklabels(["train", "test"])   # only labels (no legend)
+        ax.set_ylim(-0.6, 1.6)
+    elif mode == "overlap":
+        y_tr, y_te = 0.0, 0.0 + float(test_offset)
+        ax.set_yticks([y_tr, y_te])
+        ax.set_yticklabels(["train", "test"])   # only labels (no legend)
+        pad = 0.6
+        ax.set_ylim(min(y_tr, y_te) - pad, max(y_tr, y_te) + pad)
+    else:
+        raise ValueError("mode must be 'stack' or 'overlap'")
+
+    ax.plot(
+        train, np.full_like(train, y_tr, dtype=float),
+        linestyle="None", marker="|",
+        markersize=bar_size, markeredgewidth=bar_width,
+    )
+    ax.plot(
+        test, np.full_like(test, y_te, dtype=float),
+        linestyle="None", marker="|",
+        markersize=bar_size, markeredgewidth=bar_width,
+    )
+
+    ax.set_xlim(x_min_, x_max_)
+    ax.set_xlabel("parameter value")
+    ax.grid(True, axis="x", linestyle=":", linewidth=0.8)
+
+    fig.tight_layout()
+    return fig, ax

@@ -103,6 +103,8 @@ class ProblemAffine(Problem):
         """
         return dict(E=param[0], nu=param[1])
 
+
+
     def fom_operators(self, cls):
         """
         Assemble or reuse region-wise stiffness/load blocks.
@@ -112,6 +114,7 @@ class ProblemAffine(Problem):
           - cls.rhs_linear : global Neumann vector
         """
         if cls.cur_itr == 0:
+
             load_domain(self)  # init mesh, basis, DOFs
 
             # map material keys to forms
@@ -129,9 +132,9 @@ class ProblemAffine(Problem):
                 for region, basis in self.basis_regions.items()
             }
 
-
         return cls.K_list
-    
+
+
     def fom_rhs(self, cls):
         if cls.cur_itr == 0:
             load_domain(self)  # init mesh, basis, DOFs
@@ -173,6 +176,7 @@ class ProblemAffine(Problem):
         u[self.dirichlet_dofs] = self.dirichlet_boundary_value
         return solve(*condense(K, self.rhs_linear, x=u, D=self.dirichlet_dofs))
 
+
     def reduced_operators(self, cls):
         """
         Project FOM operators onto reduced basis and compute mean-shift.
@@ -181,7 +185,7 @@ class ProblemAffine(Problem):
         ----------
         cls : class with V_sel and mean attributes
         """
-        self.U, self.T_k = cls.V_sel.copy(), cls.mean.copy()
+        self.U, self.T_k = cls.V_sel.copy(), cls.train_ref.copy()
 
         # CSR-format full blocks
         self.K_a = {
@@ -199,6 +203,7 @@ class ProblemAffine(Problem):
         }
         # project Neumann vector
         self.f_term = self.U.T @ self.rhs_linear
+
 
     def rom_solver(self, cls, param):
         """

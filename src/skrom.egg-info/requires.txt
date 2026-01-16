@@ -3,8 +3,5 @@ scipy
 sympy
 matplotlib
 scikit-fem[all]
-sci-mplstyle-package
 pyamg
 pyDOE
-ptitprince
-matplotlib==3.8.4

@@ -15,6 +15,7 @@ The `rom` folder contains core tools for reduced-order modeling (ROM), including
 
   [Author: Suparno Bhattacharyya]
 """
+import gc
 from typing import Optional
 from threading import Thread
 import numpy as np
@@ -345,6 +346,9 @@ class LinearFormROM(LinearForm):
             zero_row = np.zeros((1, r), dtype=self.dtype)
             f_reduced = np.concatenate((f_reduced, zero_row), axis=0)
 
+
+        del R_chunk, f_chunk, R_chunk_T, f_chunk_expanded, reduced_chunk, f_reduced_B     
+        gc.collect()
 
         return f_reduced
     

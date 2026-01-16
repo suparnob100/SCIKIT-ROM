@@ -185,8 +185,11 @@ class ProblemNonLinear(Problem):
             tol=1e-2,
             maxit=500,
             alpha = 0.5,
+            rhs_args=(param,),
+            ksp_type="cg", 
         )
-    
+
+
 
     def reduced_operators(self, u, param):
         """
@@ -232,7 +235,7 @@ class ProblemNonLinear(Problem):
         """
         if cls.cur_itr == 0:
             # initialize ROM state
-            self.T_k, self.U, self.n_sel = cls.mean, cls.V_sel, cls.n_sel
+            self.T_k, self.U, self.n_sel = cls.train_ref, cls.V_sel, cls.n_sel
             load_domain(self)
             self.D = self.dirichlet_boundary_dofs.nodal_ix
             self.a, self.l = self.bilinear_forms()[0], self.linear_forms()[0]
@@ -254,7 +257,7 @@ class ProblemNonLinear(Problem):
                     param,
                     tol=1e-2,
                     maxit=500,
-                    alpha = 0.5
+                    alpha = 0.5,
                 )
 
         return u_rom
@@ -306,7 +309,7 @@ class ProblemNonLinear(Problem):
         """
         if cls.cur_itr == 0:                                   # first snapshot → build once
             # ROM data & weights
-            self.U, self.T_k, self.n_sel, self.weights = cls.V_sel, cls.mean, cls.n_sel, cls.z
+            self.U, self.T_k, self.n_sel, self.weights = cls.V_sel, cls.train_ref, cls.n_sel, cls.z
 
             load_domain(self)                                  # mesh, basis, DOFs
             self.R, self.J_form = self.linear_forms()[0], self.bilinear_forms()[0]

@@ -19,15 +19,26 @@ The `hyperreduce` folder contains all tools to perform hyper-reduction, includin
 
   [Author: Suparno Bhattacharyya]
 """
-from typing import Optional
+from typing import Optional, Any
+from types import MethodType
 from threading import Thread
 import numpy as np
 from numpy import ndarray
 from skfem.assembly.basis import Basis
 from skfem.assembly.form.form import FormExtraParams
 from skfem.assembly.form.linear_form import LinearForm  # Import the full-order linear form class
-from skfem.assembly.basis import AbstractBasis
+from skfem.assembly.basis import AbstractBasis, FacetBasis
 from numpy.typing import DTypeLike 
+
+def with_elements(self, elements: Optional[Any] = None) -> 'FacetBasis':
+    """Return a similar basis on a subset of element indices."""
+    return type(self)(
+        self.mesh,
+        self.elem,
+        mapping=self.mapping,
+        quadrature=self.quadrature,
+        facets=elements,
+    )
 
 class LinearFormHYPERROM_ecsw(LinearForm):
     """
@@ -101,6 +112,11 @@ class LinearFormHYPERROM_ecsw(LinearForm):
         self.mean = mean
         self.nthreads = nthreads
         self.dtype = dtype
+
+
+        if isinstance(ubasis, FacetBasis) and not hasattr(ubasis, "with_elements"):
+            ubasis.with_elements = MethodType(with_elements, ubasis)
+
         self.ubasis = ubasis
         
         self.r = lob.shape[1]

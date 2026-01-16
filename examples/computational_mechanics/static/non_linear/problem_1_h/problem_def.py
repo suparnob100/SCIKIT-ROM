@@ -290,7 +290,7 @@ class ProblemNonLinear(Problem):
             Mean term added to reduced solution.
         """
         if cls.cur_itr == 0:
-            self.U, self.T_k, self.n_sel = cls.V_sel, cls.mean, cls.n_sel
+            self.U, self.T_k, self.n_sel = cls.V_sel, cls.train_ref, cls.n_sel
             load_domain(self)
             self.u0_rom = np.full(self.n_sel, 0.0)
             du = self.basis.zeros()
@@ -382,7 +382,7 @@ class ProblemNonLinear(Problem):
         """
         if cls.cur_itr == 0:                                   # first snapshot → build once
             # ROM data & weights
-            self.U, self.T_k, self.n_sel, self.weights = cls.V_sel, cls.mean, cls.n_sel, cls.z
+            self.U, self.T_k, self.n_sel, self.weights = cls.V_sel, cls.train_ref, cls.n_sel, cls.z
 
             load_domain(self)                                  # mesh, basis, DOFs
             self.R, self.J_form = self.linear_forms()[0], self.bilinear_forms()[0]

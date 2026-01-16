@@ -137,7 +137,7 @@ class ProblemAffine(Problem):
         Build reduced stiffness and load projection terms.
         Projects each region block onto the reduced basis U.
         """
-        self.U, self.T_k = cls.V_sel, cls.mean
+        self.U, self.T_k = cls.V_sel, cls.train_ref
 
         # ensure correct sparse format
         Kc_dict = {region: _ensure_csr(Kblock) for region, Kblock in self.K_list.items()}

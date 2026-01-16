@@ -1,86 +1,127 @@
-import numpy as np
+"""
+VTK export utilities.
+
+This module provides functions for:
+- plotting a 2D field on a scikit-fem basis
+- writing one displacement vector to a VTK file, with mesh translation
+- exporting paired full-order and reduced-order solutions to VTK
+- exporting a displacement time series to VTK with a PVD collection file
+- exporting a point-data time series to VTK on an undeformed mesh
+
+Notes
+-----
+Authors: Suparno Bhattacharyya
+"""
+
+import os
 import shutil
 from pathlib import Path
-import os
+
+import numpy as np
 
 
-def visualize2D(u,basis):
-    from skfem.visuals.matplotlib import plot, show
-    return plot(basis,
-                u,
-                shading='gouraud',
-                colorbar='True').show()
-
-
-def save_vtk_solution(u, mesh, basis, scale, run_dir, prefix, split_dim=False):
+def visualize2D(u, basis):
     """
-    Write a single solution vector to a VTK file.
-
-    Applies a translation to the mesh based on displacement values and saves
-    the resulting geometry along with point data fields.
+    Plot a scalar field on a 2D scikit-fem basis.
 
     Parameters
     ----------
     u : array_like
-        Displacement vector of length matching the mesh degrees of freedom.
-    mesh : object
-        Mesh object supporting `translated(displacements)` to return a new mesh
-        and `save(path, point_data=...)` to write VTK files.
+        Field values compatible with the given basis.
     basis : object
-        Basis object containing attribute `nodal_dofs`, an integer array indexing
-        into the global solution vector for nodal degrees of freedom.
+        scikit-fem basis.
+
+    Returns
+    -------
+    out
+        Return value from the backend plot/show call.
+    """
+    from skfem.visuals.matplotlib import plot
+
+    return plot(
+        basis,
+        u,
+        shading="gouraud",
+        colorbar="True",
+    ).show()
+
+
+def save_vtk_solution(
+    u,
+    mesh,
+    basis,
+    scale,
+    run_dir,
+    prefix,
+    split_dim: bool = False,
+):
+    """
+    Write one solution vector to a VTK file.
+
+    The function extracts nodal degrees of freedom from ``u`` using
+    ``basis.nodal_dofs``, scales the nodal values by ``scale``, translates the
+    mesh, and writes one ``.vtk`` file. If ``split_dim`` is True, the nodal
+    displacement components are stored as scalar point-data fields.
+
+    Parameters
+    ----------
+    u : array_like
+        Global solution vector that contains nodal degrees of freedom indexed by
+        ``basis.nodal_dofs``.
+    mesh : object
+        Mesh object that provides:
+        - ``translated(u_node)`` returning a new mesh
+        - ``save(path, point_data=...)`` writing a VTK file
+    basis : object
+        Basis object that provides ``nodal_dofs``.
     scale : float
-        Scalar multiplier applied to the displacement values before translation.
-    run_dir : pathlib.Path
-        Directory in which the `.vtk` file will be created.
+        Scale factor applied to nodal values before translation.
+    run_dir : str or pathlib.Path
+        Output directory.
     prefix : str
-        Filename prefix (e.g., "test_sol_fos").
-    split_dim : bool
-        If True, splits the displacement into separate scalar fields
-        (`u_x`, `u_y`, and `u_z` for 3D) in the VTK output; otherwise
-        writes a single vector field `u`.
+        Output file prefix. The file name is ``{prefix}.vtk``.
+    split_dim : bool, optional
+        If True, write scalar fields ``u_x``, ``u_y``, ``u_z`` (up to the mesh
+        dimension). If False, write only the displaced mesh. Default is False.
 
     Returns
     -------
     None
 
-    [Author: Suparno Bhattacharyya]
+    Notes
+    -----
+    Authors: Suparno Bhattacharyya
     """
-    # extract and scale only the nodal displacements
-    u_node = scale * u[basis.nodal_dofs]     # shape (dim, n_nodes)
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    # apply displacement and get translated mesh
+    u = np.asarray(u)
+
+    # Extract nodal dofs and scale.
+    # For vector problems, basis.nodal_dofs often has shape (dim, n_nodes).
+    u_node = scale * u[basis.nodal_dofs]
+
+    # Translate the mesh by nodal displacement.
     m = mesh.translated(u_node)
 
     filename = run_dir / f"{prefix}.vtk"
 
-
-    if split_dim:
-        # prepare the point_data dict
-        point_data = {}
-
-        if u_node.ndim == 1:
-            # fallback: scalar field
-            point_data["u"] = u_node
-        else:
-            # vector field case
-            dim, n_nodes = u_node.shape
-            # when split_dim, emit separate scalars
-            if split_dim:
-                labels = ["x", "y", "z"][:dim]
-                for d in range(dim):
-                    point_data[f"u_{labels[d]}"] = u_node[d, :]
-            else:
-                # assemble a (n_nodes, dim) array for VTK vector field
-                vec = u_node.T  # now shape (n_nodes, dim)
-                point_data["u"] = vec
-
-        # write out
-        m.save(str(filename), point_data=point_data)
-
-    else:
+    if not split_dim:
         m.save(str(filename))
+        return
 
+    point_data = {}
+
+    if u_node.ndim == 1:
+        # Scalar fallback
+        point_data["u"] = u_node
+    else:
+        dim, _ = u_node.shape
+        labels = ["x", "y", "z"][:dim]
+        for d, lab in enumerate(labels):
+            point_data[f"u_{lab}"] = u_node[d, :]
+
+    m.save(str(filename), point_data=point_data)
 
 
 def generate_vtk(
@@ -91,36 +132,36 @@ def generate_vtk(
     scale: float = 1.0,
     num_test: int = 5,
     out_dir: str = "sol_vtk_files",
-    split_dim: bool = False
+    split_dim: bool = False,
+    clean_out_dir: bool = False,
 ):
     """
-    Batch export of full-order and reduced-order solutions to VTK.
+    Export paired full-order and reduced-order solutions to VTK.
 
-    Randomly selects solution indices, generates translated meshes, and
-    writes both full-order (FOS) and reduced-order (ROM) displacement fields
-    to VTK files within separate test directories. Cleans output directory on
-    each invocation.
+    The function selects ``num_test`` random indices and writes one full-order
+    and one reduced-order VTK file in a subfolder ``Test_i``.
 
     Parameters
     ----------
     LS_test : sequence of array_like
-        List or array of full-order solution vectors.
+        Full-order solution vectors.
     LS_rom : sequence of array_like
-        List or array of reduced-order solution vectors corresponding to `LS_test` indices.
+        Reduced-order solution vectors aligned with LS_test by index.
     mesh : object
-        Mesh object used for geometry translations (see `_save_vtk_solution`).
+        Mesh object passed to ``save_vtk_solution``.
     basis : object
-        Basis object with attribute `nodal_dofs` for nodal indexing.
+        Basis object passed to ``save_vtk_solution``.
     scale : float, optional
-        Scale factor for displacements before applying to the mesh (default is 1.0).
+        Scale factor for nodal values. Default is 1.0.
     num_test : int, optional
-        Number of random test cases to export (default is 5).
+        Number of cases to export. Default is 5.
     out_dir : str, optional
-        Base directory path where subdirectories `Test_1`, `Test_2`, … will be created
-        (default is "sol_vtk_files").
+        Output directory. Subfolders ``Test_1``, ``Test_2``, ... are created.
+        Default is "sol_vtk_files".
     split_dim : bool, optional
-        If True, split displacement into per-axis scalar fields in VTK outputs
-        (default is False).
+        Passed to ``save_vtk_solution``. Default is False.
+    clean_out_dir : bool, optional
+        If True, remove ``out_dir`` before writing. Default is False.
 
     Returns
     -------
@@ -128,83 +169,174 @@ def generate_vtk(
 
     Notes
     -----
-    - If `out_dir` already exists, it will be removed entirely before new output
-      is written.
-    - Each `Test_i` directory contains two files:
-      `test_sol_fos_i.vtk` and `test_sol_rom_i.vtk`.
-
-    Examples
-    --------
-    >>> generate_vtk(LS_test, LS_rom, mesh, basis, scale=0.5, num_test=3,
-    ...              out_dir="vtk_outputs", split_dim=True)
-
-    [Author: Suparno Bhattacharyya]
+    Authors: Suparno Bhattacharyya
     """
     base_dir = Path(out_dir)
-    # if base_dir.exists():
-    #     shutil.rmtree(base_dir)
-    # base_dir.mkdir()
-    os.makedirs(out_dir, exist_ok=True)
 
+    if clean_out_dir and base_dir.exists():
+        shutil.rmtree(base_dir)
+
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    n = len(LS_test)
+    if len(LS_rom) != n:
+        raise ValueError("LS_test and LS_rom must have the same length.")
 
     for i in range(1, num_test + 1):
-        idx = np.random.randint(len(LS_test))
+        idx = np.random.randint(n)
         run_dir = base_dir / f"Test_{i}"
+        run_dir.mkdir(parents=True, exist_ok=True)
 
-        # if run_dir.exists():
-        #     shutil.rmtree(run_dir)
-        # run_dir.mkdir()
-        os.makedirs(run_dir, exist_ok=True)
+        save_vtk_solution(
+            LS_test[idx],
+            mesh,
+            basis,
+            scale,
+            run_dir,
+            prefix=f"test_sol_fos_{i}",
+            split_dim=split_dim,
+        )
 
-        # write full-order solution
         save_vtk_solution(
-            LS_test[idx], mesh, basis, scale,
-            run_dir, prefix=f"test_sol_fos_{i}", split_dim=split_dim
+            LS_rom[idx],
+            mesh,
+            basis,
+            scale,
+            run_dir,
+            prefix=f"test_sol_rom_{i}",
+            split_dim=split_dim,
         )
-        # write reduced-order solution
-        save_vtk_solution(
-            LS_rom[idx], mesh, basis, scale,
-            run_dir, prefix=f"test_sol_rom_{i}", split_dim=split_dim
-        )
+
 
 def save_vtk_time_series(
-    U: np.ndarray,                # shape = (ndofs, n_steps)
-    times: np.ndarray,            # shape = (n_steps,)
+    U: np.ndarray,
+    times: np.ndarray,
     mesh,
     basis,
     scale: float,
     run_dir: Path,
-    prefix: str
+    prefix: str,
+    interval: int = 10,
 ):
     """
-    Write one VTK per time-step and a .pvd that collects them.
+    Write one VTK per saved time step and write a PVD collection file.
 
-    U      : full displacement history
-    times  : time vector
-    mesh   : skfem mesh
-    basis  : skfem basis
-    scale  : displacement scale
-    run_dir: output directory
-    prefix : file prefix, e.g. "beam"
+    The function saves frames named ``{prefix}_{k:04d}.vtk`` and writes a PVD
+    file named ``{prefix}.pvd`` that references the frames and their times.
 
-    [Author: Suparno Bhattacharyya]
+    Parameters
+    ----------
+    U : numpy.ndarray
+        Displacement history with shape (ndofs, n_steps).
+    times : numpy.ndarray
+        Time values with shape (n_steps,).
+    mesh : object
+        Mesh object passed to ``save_vtk_solution``.
+    basis : object
+        Basis object passed to ``save_vtk_solution``.
+    scale : float
+        Scale factor for nodal values before translation.
+    run_dir : pathlib.Path
+        Output directory.
+    prefix : str
+        Base name used for VTK frames and the PVD file.
+    interval : int, optional
+        Save every ``interval`` steps. Default is 10.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    Authors: Suparno Bhattacharyya
     """
+    run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    times = np.asarray(times)
+    if U.shape[1] != times.shape[0]:
+        raise ValueError("U must have shape (ndofs, n_steps) with n_steps == len(times).")
+
     pvd_file = run_dir / f"{prefix}.pvd"
 
-    # start PVD file
     with pvd_file.open("w") as f:
         f.write('<?xml version="1.0"?>\n')
         f.write('<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">\n')
-        f.write('  <Collection>\n')
-        U_plot = U[:, ::10]
-        for i, t in enumerate(times[::10]):
-            u = U_plot[:, i]
-            frame = f"{prefix}_{i:04d}"
-            # write one .vtk for this step
-            save_vtk_solution(u, mesh, basis, scale, run_dir, frame)
-            # add entry to .pvd
-            f.write(f'    <DataSet timestep="{t}" group="" part="0" file="{frame}.vtk"/>\n')
+        f.write("  <Collection>\n")
 
-        f.write('  </Collection>\n')
-        f.write('</VTKFile>\n')
+        step_ids = range(0, times.shape[0], interval)
+        for out_i, step in enumerate(step_ids):
+            u = U[:, step]
+            t = times[step]
+            frame = f"{prefix}_{out_i:04d}"
+
+            save_vtk_solution(u, mesh, basis, scale, run_dir, frame)
+
+            f.write(
+                f'    <DataSet timestep="{t}" group="" part="0" file="{frame}.vtk"/>\n'
+            )
+
+        f.write("  </Collection>\n")
+        f.write("</VTKFile>\n")
+
+
+def save_vtk_time_series_point(
+    U: np.ndarray,
+    mesh,
+    run_dir: Path,
+    prefix: str,
+    interval: int = 10,
+    point_data_name: str = "Temperature",
+):
+    """
+    Write point-data frames to VTK on an undeformed mesh.
+
+    The function writes frames named ``{prefix}_{k:04d}.vtk`` with a point-data
+    array stored under ``point_data_name``.
+
+    The time axis handling is:
+    - if ``U.shape[0] == n_points``: treat U as (n_points, n_steps) and save columns
+    - else: treat U as (n_steps, n_points) and save rows
+
+    Parameters
+    ----------
+    U : numpy.ndarray
+        Point-data history with shape (n_steps, n_points) or (n_points, n_steps).
+    mesh : object
+        Mesh object that provides ``save(path, point_data=...)``.
+    run_dir : pathlib.Path
+        Output directory.
+    prefix : str
+        Base name used for VTK frames.
+    interval : int, optional
+        Save every ``interval`` steps. Default is 10.
+    point_data_name : str, optional
+        Key used in VTK point_data. Default is "Temperature".
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    Authors: Suparno Bhattacharyya
+    """
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    U = np.asarray(U)
+    n_points = mesh.p.shape[1] if hasattr(mesh, "p") else None
+
+    if n_points is not None and U.ndim == 2 and U.shape[0] == n_points:
+        # U: (n_points, n_steps)
+        step_ids = range(0, U.shape[1], interval)
+        for out_i, step in enumerate(step_ids):
+            frame = f"{prefix}_{out_i:04d}"
+            mesh.save(run_dir / f"{frame}.vtk", point_data={point_data_name: U[:, step]})
+    else:
+        # U: (n_steps, n_points)
+        step_ids = range(0, U.shape[0], interval)
+        for out_i, step in enumerate(step_ids):
+            frame = f"{prefix}_{out_i:04d}"
+            mesh.save(run_dir / f"{frame}.vtk", point_data={point_data_name: U[step, :]})

@@ -15,6 +15,7 @@ The `rom` folder contains core tools for reduced-order modeling (ROM), including
 
   [Author: Suparno Bhattacharyya]
 """
+import gc
 from typing import Optional
 from threading import Thread
 
@@ -263,7 +264,7 @@ class BilinearFormROM(BilinearForm):
 
                 f = np.frompyfunc(compute_K_red_for_element, 1, 1)
                 K_red_B_obj = f(self.groupB)
-                K_red_B_list = [np.asarray(x, dtype=dtype) for x in K_red_B_obj]
+                K_red_B_list = [np.asarray(x).astype(np.float32, copy=False) for x in K_red_B_obj]
                 K_red_B = np.sum(np.stack(K_red_B_list), axis=0)
 
 
@@ -273,11 +274,12 @@ class BilinearFormROM(BilinearForm):
 
 
             K_reduced = sum_A + K_red_B
-
+            
             return K_reduced
 
         K_reduced = compute_reduced_matrix(self.lob, self.rob, element_matrices)
 
+        
         return K_reduced
 
 
