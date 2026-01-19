@@ -20,7 +20,7 @@ from typing import Tuple, Dict, Type, Any, Optional, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import importlib
-
+import traceback
 import numpy as np
 
 from skrom.fom.fem_utils import unwrap_attr
@@ -594,6 +594,126 @@ class rom_simulation(_ThreadedSweepMixin):
             return sol_candidate.T
         return sol_candidate
 
+
+    def _run_one_serial_with_retries(
+        self,
+        worker,
+        param,
+        i_local: int,
+        i_global: int,
+        *,
+        max_retries: int,
+        retry_delay: float,
+        fail_fast: bool,
+        label: str,
+        verbose: bool,
+    ):
+        last_exc = None
+        for attempt in range(max_retries + 1):
+            t0 = time.perf_counter()
+            try:
+                out = worker(param, i_local, i_global)
+                dt = time.perf_counter() - t0
+                if verbose:
+                    print(f"[{label}] serial warm-up done (i={i_local}) in {dt:.3e}s")
+                return out, dt
+            except Exception as e:
+                dt = time.perf_counter() - t0
+                last_exc = e
+                if self.logger is not None:
+                    self.logger.exception(
+                        f"[{label}] serial warm-up failed (i={i_local}, attempt={attempt+1}/{max_retries+1})"
+                    )
+                if verbose:
+                    print(f"[{label}] serial warm-up failed (attempt {attempt+1}/{max_retries+1})")
+                    traceback.print_exc()
+
+                if attempt < max_retries:
+                    time.sleep(retry_delay)
+                    continue
+
+                if fail_fast:
+                    raise
+                return None, dt  # keep alignment; caller already handles outs[i] is None
+
+        if fail_fast and last_exc is not None:
+            raise last_exc
+        return None, 0.0
+
+    def _threaded_sweep_serial_first(
+        self,
+        params,
+        worker,
+        *,
+        global_indices,
+        parallel: bool,
+        serial_first: bool,
+        max_workers,
+        verbose: bool,
+        label: str,
+        max_retries: int,
+        retry_delay: float,
+        fail_fast: bool,
+    ):
+        n = len(params)
+        if n == 0:
+            return [], []
+
+        # default: your existing behavior
+        if (not parallel) or (not serial_first) or (n == 1):
+            return self._threaded_sweep(
+                params,
+                worker,
+                global_indices=global_indices,
+                parallel=parallel,
+                max_workers=max_workers,
+                verbose=verbose,
+                label=label,
+                max_retries=max_retries,
+                retry_delay=retry_delay,
+                fail_fast=fail_fast,
+            )
+
+        # allocate full outputs
+        outs = [None] * n
+        times = [0.0] * n
+
+        # 1) run first item serially in the main thread
+        outs[0], times[0] = self._run_one_serial_with_retries(
+            worker,
+            params[0],
+            0,
+            global_indices[0],
+            max_retries=max_retries,
+            retry_delay=retry_delay,
+            fail_fast=fail_fast,
+            label=label,
+            verbose=verbose,
+        )
+
+        # 2) run the remaining items with your threaded sweep
+        def worker_rest(param, i_local_rest, i_global_rest):
+            # IMPORTANT: shift local index by +1 to keep alignment with fos_test_data
+            return worker(param, i_local_rest + 1, i_global_rest)
+
+        outs_rest, times_rest = self._threaded_sweep(
+            params[1:],
+            worker_rest,
+            global_indices=global_indices[1:],
+            parallel=True,  # force parallel for the remainder
+            max_workers=max_workers,
+            verbose=verbose,
+            label=label,
+            max_retries=max_retries,
+            retry_delay=retry_delay,
+            fail_fast=fail_fast,
+        )
+
+        outs[1:] = outs_rest
+        times[1:] = times_rest
+        return outs, times
+
+
     def run_rom_simulation(
         self,
         parallel: bool = True,
@@ -602,6 +722,7 @@ class rom_simulation(_ThreadedSweepMixin):
         max_retries: int = 1,
         retry_delay: float = 0.5,
         fail_fast: bool = True,
+        serial_first: bool = False,   # <-- add this
     ):
         self.speed_up      = []
         self.rom_error     = []
@@ -612,6 +733,7 @@ class rom_simulation(_ThreadedSweepMixin):
         global_idx = self._test_global_idx[:n]
 
         def worker(param, i_local, i_global):
+            self.cur_itr = i_local
             sol_red_ = self.rom_solver(cls=self, param=param)
             sol_rom = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
 
@@ -623,11 +745,12 @@ class rom_simulation(_ThreadedSweepMixin):
             err = 100.0 * np.linalg.norm(sol_fos - sol_rom) / np.linalg.norm(sol_fos)
             return sol_rom.copy(), float(err)
 
-        outs, times = self._threaded_sweep(
+        outs, times = self._threaded_sweep_serial_first(
             params,
             worker,
             global_indices=global_idx,
             parallel=parallel,
+            serial_first=serial_first,     # <-- use it
             max_workers=max_workers,
             verbose=verbose,
             label="ROM",
@@ -662,6 +785,7 @@ class rom_simulation(_ThreadedSweepMixin):
         max_retries: int = 1,
         retry_delay: float = 0.5,
         fail_fast: bool = True,
+        serial_first: bool = False,   # <-- add this
     ):
         self.hyper_speed_up      = []
         self.hyper_rom_error     = []
@@ -673,6 +797,7 @@ class rom_simulation(_ThreadedSweepMixin):
         global_idx = self._test_global_idx[:n]
 
         def worker(param, i_local, i_global):
+            self.cur_itr = i_local
             sol_red_ = self.hyper_rom_solver_ecsw(cls=self, param=param)
             sol_hyp = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
 
@@ -684,11 +809,12 @@ class rom_simulation(_ThreadedSweepMixin):
             err = 100.0 * np.linalg.norm(sol_fos - sol_hyp) / np.linalg.norm(sol_fos)
             return sol_hyp.copy(), float(err)
 
-        outs, times = self._threaded_sweep(
+        outs, times = self._threaded_sweep_serial_first(
             params,
             worker,
             global_indices=global_idx,
             parallel=parallel,
+            serial_first=serial_first,
             max_workers=max_workers,
             verbose=verbose,
             label="ECSW",
@@ -725,6 +851,7 @@ class rom_simulation(_ThreadedSweepMixin):
         max_retries: int = 1,
         retry_delay: float = 0.5,
         fail_fast: bool = True,
+        serial_first: bool = False,   # <-- add this
     ):
         self.hyper_speed_up      = []
         self.hyper_rom_error     = []
@@ -738,6 +865,7 @@ class rom_simulation(_ThreadedSweepMixin):
         global_idx = self._test_global_idx[:n]
 
         def worker(param, i_local, i_global):
+            self.cur_itr = i_local
             sol_red_ = self.hyper_rom_solver_deim(cls=self, param=param)
 
             # FIX: reconstruct once
@@ -751,11 +879,12 @@ class rom_simulation(_ThreadedSweepMixin):
             err = 100.0 * np.linalg.norm(sol_fos - sol_hyp) / np.linalg.norm(sol_fos)
             return sol_hyp.copy(), float(err)
 
-        outs, times = self._threaded_sweep(
+        outs, times = self._threaded_sweep_serial_first(
             params,
             worker,
             global_indices=global_idx,
             parallel=parallel,
+            serial_first=serial_first,
             max_workers=max_workers,
             verbose=verbose,
             label="DEIM",

@@ -1,43 +1,60 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "skrom"
 version = "1.0.0"
 description = "Your project's description"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+
 authors = [
   { name = "Ali Syed", email = "saabidi1@tamu.edu" },
-  { name = "Suparno Bhattacharyya", email = "suparno.bhattacharyya.official@gmail.com" }
+  { name = "Suparno Bhattacharyya", email = "suparno@iitisc.ac.in" }
 ]
+
 dependencies = [
   "numpy",
   "scipy",
   "sympy",
-  "matplotlib",
+  "matplotlib==3.8.4",
   "scikit-fem[all]",
   "pyamg",
   "pyDOE",
   "ptitprince",
-  "matplotlib==3.8.4",
-  "scikit-learn"
+  "scikit-learn",
+  "h5py",
+  "gmsh"
 ]
-readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.8"
+
+[project.optional-dependencies]
+petsc311 = [
+  "petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-win_amd64.whl"
+]
 
 [project.scripts]
-skrom = "skrom.cli:cli"  # ← this gives the user `skrom` command
+skrom = "skrom.cli:cli"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
 
 [tool.setuptools.package-data]
-# Include templates and notebooks in install
-"skrom" = [
+skrom = [
   "templates/problem_template/*.py",
   "templates/problem_template/*.ipynb"
 ]
+sci_mplstyle_package = [
+  "style_files/*.mplstyle",
+  "*.mplstyle"
+]
 
-[tool.setuptools.packages.find]
-where = ["src"]          #  ← “only look under src/”
-[tool.setuptools.package-dir]
-"" = "src"               #  ← “src/ is the package root”
-
+[tool.setuptools.exclude-package-data]
+"*" = ["*.egg-info/*", "build/*", "__pycache__/*"]

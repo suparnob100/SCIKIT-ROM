@@ -7,3 +7,4 @@ src/docs
 /.quarto/
 build/
 examples/heat_transfer/dynamic/problem_3D_printing
+examples/heat_transfer/dynamic/problem_3D_printing_nu_mesh
