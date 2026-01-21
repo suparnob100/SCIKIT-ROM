@@ -1,10 +1,7 @@
 from pathlib import Path
 import json
 import numpy as np
-from tqdm import tqdm
 from .vtuwriter import VTUSeriesWriter
-from .domain import domain
-
 """
 VTU Series Conversion Utilities
 
@@ -16,135 +13,93 @@ VTU snapshots at specified strides, and aggregates them into PVD collection file
 [Author: Suparno Bhattacharyya]
 """
 
-def build_mesh_from_params(p: dict):
-    """
-    Construct a SciKit-FEM mesh from JSON parameter entries.
 
-    Reads domain dimensions and mesh refinement factor from a parameter dictionary
-    and uses them to build a finite-element mesh via the `domain` factory.
+def save_vtu_time_series_point(
+    U: np.ndarray,
+    mesh,
+    run_dir: Path,
+    prefix: str,
+    interval: int = 10,
+    point_data_name: str = "Temperature",
+):
+    """
+    Write point-data frames to VTK on an undeformed mesh.
+
+    The function writes frames named ``{prefix}_{k:04d}.vtk`` with a point-data
+    array stored under ``point_data_name``.
+
+    The time axis handling is:
+    - if ``U.shape[0] == n_points``: treat U as (n_points, n_steps) and save columns
+    - else: treat U as (n_steps, n_points) and save rows
 
     Parameters
     ----------
-    p : dict
-        Dictionary of mesh parameters. Expected keys (3D):
-        - ``lx`` : float, optional
-            Domain length in the x-direction (default is 1.0).
-        - ``ly`` : float, optional
-            Domain length in the y-direction (default is 1.0).
-        - ``lz`` : float, optional
-            Domain length in the z-direction (default is 1.0).
-        - ``factor`` : int, optional
-            Mesh refinement factor controlling element subdivision (default is 4).
+    U : numpy.ndarray
+        Point-data history with shape (n_steps, n_points) or (n_points, n_steps).
+    mesh : object
+        Mesh object that provides ``save(path, point_data=...)``.
+    run_dir : pathlib.Path
+        Output directory.
+    prefix : str
+        Base name used for VTU frames.
+    interval : int, optional
+        Save every ``interval`` steps. Default is 10.
+    point_data_name : str, optional
+        Key used in VTK point_data. Default is "Temperature".
 
     Returns
     -------
-    mesh : Mesh
-        A SciKit-FEM mesh object constructed with the specified dimensions
-        and refinement factor.
-
-    Examples
-    --------
-    >>> params = {'lx': 2.0, 'ly': 1.0, 'lz': 0.5, 'factor': 6}
-    >>> mesh = build_mesh_from_params(params)
-    >>> mesh.p.shape  # number of spatial dimensions and nodes
-    (3, N)
+    None
 
     Notes
     -----
-    - If any of the dimension keys are missing, defaults of 1.0 each are used.
-    - `factor` must be convertible to int; non-integer inputs will be cast.
+    Authors: Suparno Bhattacharyya
     """
-    lx = p.get("lx", 1.0)
-    ly = p.get("ly", 1.0)
-    lz = p.get("lz", 1.0)
-    factor = int(p.get("factor", 4))
-    mesh, *_ = domain(lx, ly, lz, factor=factor)
-    return mesh
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    U = np.asarray(U)
+    n_points = mesh.p.shape[1] if hasattr(mesh, "p") else None
+
+    if n_points is not None and U.ndim == 2 and U.shape[0] == n_points:
+        # U: (n_points, n_steps)
+        step_ids = range(0, U.shape[1], interval)
+        for out_i, step in enumerate(step_ids):
+            frame = f"{prefix}_{out_i:04d}"
+            mesh.save(run_dir / f"{frame}.vtu", point_data={point_data_name: U[:, step]})
+    else:
+        # U: (n_steps, n_points)
+        step_ids = range(0, U.shape[0], interval)
+        for out_i, step in enumerate(step_ids):
+            frame = f"{prefix}_{out_i:04d}"
+            mesh.save(run_dir / f"{frame}.vtu", point_data={point_data_name: U[step, :]})
 
 
-def convert_to_vtu_series(
-    root_dir: str | Path,
-    sol_file_name: str = "u_solution.npy",
-    vtu_folder_name: str = "VTU",
-    steps: int = 300,
-    stride: int = 10
-) -> int:
+def save_vtu_time_series_point_vertexsample(U, mesh, basis, run_dir, prefix, interval=8, point_data_name="Temperature"):
     """
-    Convert NumPy solution snapshots to a VTU series with PVD index.
-
-    Scans all subdirectories under `root_dir` for pairs of ``params.json`` and
-    solution files, rebuilds the corresponding mesh, writes VTU files for each
-    snapshot at intervals defined by `stride` up to `steps`, and aggregates
-    outputs into a PVD file for streamlined visualization.
-
-    Parameters
-    ----------
-    root_dir : str or Path
-        Base directory to search recursively for solution runs.
-    sol_file_name : str, optional
-        Filename of the NumPy solution array (default is ``"u_solution.npy"``).
-    vtu_folder_name : str, optional
-        Name of the subfolder to create for VTU outputs in each run directory
-        (default is ``"VTU"``).
-    steps : int, optional
-        Maximum number of time steps to process from each solution array
-        (default is 300).
-    stride : int, optional
-        Interval between snapshots to write (every `stride` steps)
-        (default is 10).
-
-    Returns
-    -------
-    processed : int
-        Total number of run folders processed (i.e., those containing both
-        ``params.json`` and the solution file).
-
-    Raises
-    ------
-    IOError
-        If reading ``params.json`` or the NumPy array fails for a detected folder.
-
-    Examples
-    --------
-    >>> n = convert_to_vtu_series(
-    ...     'sim_runs', sol_file_name='solutions/u.npy',
-    ...     vtu_folder_name='VTU_out', steps=200, stride=5
-    ... )
-    >>> print(f"Processed {n} runs.")
-
-    Notes
-    -----
-    - Existing ``root_dir`` contents are not modified or deleted; new VTU folders
-      are created alongside original data.
-    - Uses `tqdm` for a progress bar when scanning directories.
-    - PVD writer organizes all snapshot VTU files for each run into a single
-      index file for use with ParaView or similar tools.
+    U: (n_steps, ndofs_P2)
+    Saves vertex-sampled field (n_vertices,) on the original mesh.
     """
-    root = Path(root_dir).expanduser().resolve()
-    processed = 0
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    for folder in tqdm(sorted(root.glob("**/"))):
-        par = folder / "params.json"
-        sol = folder / sol_file_name
-        if not par.exists() or not sol.exists():
-            continue
+    P = basis.probes(mesh.p)                     # maps P2 dofs -> values at vertices (n_vertices x ndofs)
 
-        params = json.loads(par.read_text())
-        u_sol = np.load(sol)
-        mesh = build_mesh_from_params(params)
+    step_ids = np.arange(0, U.shape[0], interval)
+    for out_i, step in enumerate(step_ids):
+        frame = f"{prefix}_{out_i:04d}"
+        u_vertex = P @ U[step, :]                # (n_vertices,)
+        mesh.save(run_dir / f"{frame}.vtu", point_data={point_data_name: u_vertex})
 
-        writer = VTUSeriesWriter(
-            mesh=mesh,
-            output_dir=folder / vtu_folder_name,
-            prefix="skfem",
-            skip=stride
-        )
 
-        for step in range(min(steps, len(u_sol))):
-            if step % stride == 0:
-                writer.write_step(u_sol[step], step, step)
+def save_vtu_point_vertexsample(U, mesh, basis, run_dir, fname, point_data_name="Temperature"):
+    """
+    U: (n_steps, ndofs_P2)
+    Saves vertex-sampled field (n_vertices,) on the original mesh.
+    """
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-        writer.write_pvd()
-        processed += 1
+    P = basis.probes(mesh.p)                     # maps P2 dofs -> values at vertices (n_vertices x ndofs)
 
-    return processed
+    u_vertex = P @ U                # (n_vertices,)
+
+    mesh.save(run_dir / f"{fname}.vtu", point_data={point_data_name: u_vertex})

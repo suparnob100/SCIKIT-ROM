@@ -401,3 +401,19 @@ def save_vtu_time_series_point(
         for out_i, step in enumerate(step_ids):
             frame = f"{prefix}_{out_i:04d}"
             mesh.save(run_dir / f"{frame}.vtu", point_data={point_data_name: U[step, :]})
+
+
+def save_vtu_time_series_point_vertexsample(U, mesh, basis, run_dir, prefix, interval=8, point_data_name="Temperature"):
+    """
+    U: (n_steps, ndofs_P2)
+    Saves vertex-sampled field (n_vertices,) on the original mesh.
+    """
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    P = basis.probes(mesh.p)                     # maps P2 dofs -> values at vertices (n_vertices x ndofs)
+
+    step_ids = np.arange(0, U.shape[0], interval)
+    for out_i, step in enumerate(step_ids):
+        frame = f"{prefix}_{out_i:04d}"
+        u_vertex = P @ U[step, :]                # (n_vertices,)
+        mesh.save(run_dir / f"{frame}.vtu", point_data={point_data_name: u_vertex})
