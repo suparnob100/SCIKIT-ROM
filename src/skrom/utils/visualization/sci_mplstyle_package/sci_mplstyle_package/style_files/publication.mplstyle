@@ -61,7 +61,6 @@ grid.color : [1,1,1]
 grid.linewidth : 1.0
 grid.alpha : 1.0
 #grid.linestyle : --
-axes.axisbelow : True
 
 
 ## Tick properties (X-axis)
