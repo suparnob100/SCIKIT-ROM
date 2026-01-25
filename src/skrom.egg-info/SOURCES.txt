@@ -10,7 +10,6 @@ src/skrom.egg-info/requires.txt
 src/skrom.egg-info/top_level.txt
 src/skrom/fom/__init__.py
 src/skrom/fom/fem_utils.py
-src/skrom/fom/fem_utils_old.py
 src/skrom/problem_classes/__init__.py
 src/skrom/problem_classes/static/__init__.py
 src/skrom/problem_classes/static/master_class.py
@@ -40,7 +39,10 @@ src/skrom/templates/problem_template/problem.ipynb
 src/skrom/templates/problem_template/problem_def.py
 src/skrom/templates/problem_template/properties.py
 src/skrom/utils/__init__.py
+src/skrom/utils/hdf5_store.py
 src/skrom/utils/imports.py
+src/skrom/utils/save_h5.py
+src/skrom/utils/data_io/save_h5.py
 src/skrom/utils/dynamics/__init__.py
 src/skrom/utils/dynamics/integrators.py
 src/skrom/utils/reduced_basis/__init__.py

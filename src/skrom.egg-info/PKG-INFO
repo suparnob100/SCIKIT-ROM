@@ -2,17 +2,24 @@ Metadata-Version: 2.4
 Name: skrom
 Version: 1.0.0
 Summary: Your project's description
-Author-email: Ali Syed <saabidi1@tamu.edu>, Suparno Bhattacharyya <suparno.bhattacharyya.official@gmail.com>
+Author-email: Ali Syed <saabidi1@tamu.edu>, Suparno Bhattacharyya <suparno@iitisc.ac.in>
 License: MIT
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 Requires-Dist: numpy
 Requires-Dist: scipy
 Requires-Dist: sympy
-Requires-Dist: matplotlib
+Requires-Dist: matplotlib==3.8.4
 Requires-Dist: scikit-fem[all]
 Requires-Dist: pyamg
 Requires-Dist: pyDOE
+Requires-Dist: ptitprince
+Requires-Dist: scikit-learn
+Requires-Dist: h5py
+Requires-Dist: gmsh
+Requires-Dist: sci_mplstyle_package @ file:./src/skrom/utils/visualization/sci_mplstyle_package
+Provides-Extra: petsc311
+Requires-Dist: petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-win_amd64.whl ; extra == "petsc311"
 
 <figure align="left" style="padding: 20px;">
   <img src="docs/resources/images/image_tamids.png" alt="FOM" width="55" style="margin-right: 20px;" />

@@ -26,7 +26,10 @@ dependencies = [
   "ptitprince",
   "scikit-learn",
   "h5py",
-  "gmsh"
+  "gmsh",
+
+  # Install local style package automatically
+  "sci_mplstyle_package @ file:./src/skrom/utils/visualization/sci_mplstyle_package"
 ]
 
 [project.optional-dependencies]
@@ -49,11 +52,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 skrom = [
   "templates/problem_template/*.py",
-  "templates/problem_template/*.ipynb"
-]
-sci_mplstyle_package = [
-  "style_files/*.mplstyle",
-  "*.mplstyle"
+  "templates/problem_template/*.ipynb",
 ]
 
 [tool.setuptools.exclude-package-data]

@@ -1,7 +1,15 @@
 numpy
 scipy
 sympy
-matplotlib
+matplotlib==3.8.4
 scikit-fem[all]
 pyamg
 pyDOE
+ptitprince
+scikit-learn
+h5py
+gmsh
+sci_mplstyle_package @ file:./src/skrom/utils/visualization/sci_mplstyle_package
+
+[petsc311]
+petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-win_amd64.whl
