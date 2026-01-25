@@ -34,8 +34,10 @@ dependencies = [
 
 [project.optional-dependencies]
 petsc311 = [
-  "petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-win_amd64.whl"
+  "petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-win_amd64.whl",
+  "mpi4py; platform_system == 'Windows'",
 ]
+
 
 [project.scripts]
 skrom = "skrom.cli:cli"

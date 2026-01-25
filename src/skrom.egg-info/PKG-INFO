@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: skrom
 Version: 1.0.0
-Summary: Your project's description
+Summary: A python toolbox for projection-based ROMs
 Author-email: Ali Syed <saabidi1@tamu.edu>, Suparno Bhattacharyya <suparno@iitisc.ac.in>
 License: MIT
 Requires-Python: >=3.8

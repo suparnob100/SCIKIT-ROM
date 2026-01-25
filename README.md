@@ -20,6 +20,8 @@ A comprehensive Python library Built on scikit-fem to perform projection-based m
 git clone https://github.com/suparnob100/scikit-rom.git
 cd scikit-rom
 pip install -e .
+conda install -c conda-forge -y mkl intel-openmp
+conda install -c conda-forge -y msmpi mpi4py
 ```
 
 ## 📖 Documentation
