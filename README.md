@@ -16,7 +16,7 @@ A comprehensive Python library Built on scikit-fem to perform projection-based m
 ### Installation
 
 ```bash
-# Install from source (recommended)
+# Windows
 git clone https://github.com/suparnob100/scikit-rom.git
 cd scikit-rom
 
@@ -27,8 +27,53 @@ conda install -c conda-forge -y msmpi mpi4py
 pip install -e .
 or 
 pip install -e .[petsc311] (optional)
-
 ```
+
+```bash
+# Mac
+git clone https://github.com/suparnob100/scikit-rom.git
+cd scikit-rom
+
+conda create -n scikitrom python==3.11 (we recommend 3.11 so that you can use prebuild petsc whl)
+
+Apple Silicon (M1/M2/M3) — recommended
+conda install -c conda-forge -y libblas liblapack openblas llvm-openmp
+
+Intel Mac — two options
+**Option A (OpenBLAS + OpenMP, safest on conda-forge):**
+conda install -c conda-forge -y libblas liblapack openblas llvm-openmp
+**Option B (MKL, only if you specifically want MKL on Intel Mac):**
+conda install -c conda-forge -y mkl intel-openmp
+
+conda install -c conda-forge -y mpich mpi4py
+
+pip install -e .
+```
+
+```bash
+# Linux
+git clone https://github.com/suparnob100/scikit-rom.git
+cd scikit-rom
+
+# Create env (3.11 recommended for petsc4py wheels where available)
+conda create -n scikitrom -y python=3.11
+conda activate scikitrom
+
+# BLAS/OpenMP (Linux equivalent of MKL+intel-openmp)
+# Option A (recommended on conda-forge): OpenBLAS + OpenMP runtime
+conda install -c conda-forge -y libblas liblapack openblas llvm-openmp
+
+# MPI (Linux equivalent of MS-MPI)
+# Option A (recommended): MPICH
+conda install -c conda-forge -y mpich mpi4py
+# Option B: OpenMPI (use this instead of MPICH if you prefer)
+# conda install -c conda-forge -y openmpi mpi4py
+
+pip install -e .
+# or
+pip install -e .[petsc311]   # optional
+```
+
 
 ## 📖 Documentation
 
