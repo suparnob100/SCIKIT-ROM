@@ -20,11 +20,13 @@ A comprehensive Python library Built on scikit-fem to perform projection-based m
 git clone https://github.com/suparnob100/scikit-rom.git
 cd scikit-rom
 
+conda create -n scikitrom python==3.11 (we recommend 3.11 so that you can use prebuilt petsc whl)
+conda activate scikitrom
+
 # without petsc
 pip install -e .
 
 # with petsc (optional)
-conda create -n scikitrom python==3.11 (we recommend 3.11 so that you can use prebuilt petsc whl)
 conda install -c conda-forge -y mkl intel-openmp
 conda install -c conda-forge -y msmpi mpi4py
 
@@ -37,6 +39,7 @@ git clone https://github.com/suparnob100/scikit-rom.git
 cd scikit-rom
 
 conda create -n scikitrom python==3.11 (we recommend 3.11 so that you can use prebuilt petsc whl)
+conda activate scikitrom
 
 # without petsc
 pip install -e .
