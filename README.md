@@ -4,7 +4,7 @@
 </p> -->
 
 <p>
-  <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="55" align="left">
+  <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="85" align="left">
   <img src="https://via.placeholder.com/9999x1/ffffff/ffffff.png" alt="" width="99" height="85">
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="85" align="right">
 </p>
