@@ -1,6 +1,9 @@
 <figure align="left" style="padding: 20px;">
   <img src="docs/resources/images/image_tamids.png" alt="FOM" width="55" style="margin-right: 20px;" />
-  
+
+<figure align="right" style="padding: 20px;">
+  <img src="docs/resources/images/iitism-logo.jpg" alt="FOM" width="55" style="margin-right: 20px;" />
+
 # scikit-rom (skrom)
 A comprehensive Python library Built on scikit-fem to perform projection-based model order reduction  of finite element models, enabling fast and accurate computational simulations through dimensionality reduction techniques.
 
