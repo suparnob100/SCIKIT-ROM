@@ -3,10 +3,17 @@
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="90" />
 </p> -->
 
-<div style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
-  <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="55" style="display:block;" />
-  <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="85" style="display:block;" />
-</div>
+<table width="100%">
+  <tr>
+    <td align="left"  valign="middle">
+      <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="55">
+    </td>
+    <td align="right" valign="middle">
+      <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="85">
+    </td>
+  </tr>
+</table>
+
 
 
 # scikit-rom (skrom)
