@@ -3,7 +3,7 @@
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="90" />
 </p> -->
 
-<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<table width="100%" border="0" cellpadding="0" cellspacing="0" style="border: none;">
   <tr>
     <td align="left"  valign="middle">
       <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="55">
