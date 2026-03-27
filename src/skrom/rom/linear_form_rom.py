@@ -412,6 +412,101 @@ class LinearFormROM(LinearForm):
 
  
 
+    def _kernel_qp(self, v, w, dx) -> ndarray:
+        """
+        Return per-element, per-Gauss local vector contributions.
+
+        The returned values include multiplication by ``dx`` but are not yet
+        summed over Gauss points.
+        """
+        val = np.asarray(self.form(*v, w) * dx, dtype=self.dtype)
+        if val.ndim != 2:
+            raise ValueError(
+                "ECM extraction expects the linear form kernel to return a 2D array "
+                "of shape (n_elements, n_gauss_points) after multiplying by dx."
+            )
+        if val.shape == dx.shape:
+            return val
+        if val.shape == dx.T.shape:
+            return val.T
+        raise ValueError(
+            f"Unexpected ECM linear kernel shape {val.shape}; expected {dx.shape} or {dx.T.shape}."
+        )
+
+    def _threaded_kernel_qp(self, data, indices, basis_list, wdict, dx):
+        for i in indices:
+            data[i, :, :] = self._kernel_qp(basis_list[i], wdict, dx)
+
+    def extract_element_vector_qp(self, basis: AbstractBasis, **kwargs):
+        """
+        Extract local element load vectors resolved at Gauss points.
+
+        Returns
+        -------
+        element_vectors_q : ndarray, shape (n_elements, n_local_dofs, n_q)
+            Local load contributions already multiplied by ``dx`` but not yet
+            summed over quadrature points.
+        """
+        nt = basis.nelems
+        dx = basis.dx
+        nq = dx.shape[1]
+
+        wdict = FormExtraParams({
+            **basis.default_parameters(),
+            **self._normalize_asm_kwargs(kwargs, basis),
+        })
+
+        local_data = np.zeros((basis.Nbfun, nt, nq), dtype=self.dtype)
+
+        if self.nthreads <= 0:
+            for i in range(basis.Nbfun):
+                local_data[i, :, :] = self._kernel_qp(basis.basis[i], wdict, dx)
+        else:
+            indices = np.arange(basis.Nbfun)
+            indices_chunks = np.array_split(indices, self.nthreads)
+            threads = [
+                Thread(
+                    target=self._threaded_kernel_qp,
+                    args=(local_data, chunk, basis.basis, wdict, dx),
+                )
+                for chunk in indices_chunks
+            ]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        return np.transpose(local_data, (1, 0, 2))
+
+    def hyperreduction_ecm(self, **kwargs) -> ndarray:
+        """
+        Assemble per-element, per-Gauss reduced residual contributions for ECM.
+
+        Returns
+        -------
+        f_reduced_q : ndarray, shape (n_elements * n_q, r)
+            Reduced contributions ordered with flat index ``e * n_q + q``.
+        """
+        element_vectors_q = self.extract_element_vector_qp(self.ubasis, **kwargs)
+        n_elements, _, n_q = element_vectors_q.shape
+        r = self.r
+
+        rows = []
+        for e in range(n_elements):
+            local_mask = self.mask[:, e]
+            idx = self.mapping[self.element_dofs[:, e]][local_mask]
+            if idx.size == 0:
+                rows.append(np.zeros((n_q, r), dtype=self.dtype))
+                continue
+
+            R_free = self.r_basis[idx, :]
+            f_local_free_q = element_vectors_q[e, local_mask, :]
+            f_red_q = (R_free.T @ f_local_free_q).T
+            rows.append(np.asarray(f_red_q, dtype=self.dtype))
+
+        return np.vstack(rows)
+
+
 
 
 

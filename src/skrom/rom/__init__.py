@@ -17,3 +17,11 @@ The `rom` folder provides core reduced‐order modeling tools:
       • Data I/O for ROM simulations (`rom_data_gen`, `load_rom_data`)
       • Newton solvers for (hyper‐)reduced systems
 """
+
+from .ecm import (
+    dense_ecm_weights,
+    flat_to_element_gauss_weights,
+    active_ecm_elements,
+    BilinearFormHYPERROM_ecm,
+    LinearFormHYPERROM_ecm,
+)

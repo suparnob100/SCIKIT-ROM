@@ -71,7 +71,8 @@ class Problem(ABC):
     def hyper_rom_solver_deim(self): ...
     @abstractmethod
     def hyper_rom_solver_ecsw(self): ...
-
+    @abstractmethod
+    def hyper_rom_solver_ecm(self): ...
 
 # IMPORTANT: reuse shared registry if it exists (your problems likely register there)
 _USING_SHARED_REGISTRY = False
@@ -179,9 +180,10 @@ def assign_properties(prob: Problem) -> Tuple:
     rom_solver        = prob.rom_solver
     hyper_deim_solver = prob.hyper_rom_solver_deim
     hyper_ecsw_solver = prob.hyper_rom_solver_ecsw
+    hyper_ecm_solver  = prob.hyper_rom_solver_ecm
     return (
         parameters, a, l, domain_, properties,
-        fom_solver, rom_solver, hyper_deim_solver, hyper_ecsw_solver
+        fom_solver, rom_solver, hyper_deim_solver, hyper_ecsw_solver, hyper_ecm_solver
     )
 
 
@@ -546,6 +548,7 @@ class rom_simulation(_ThreadedSweepMixin):
             self.rom_solver,
             self.hyper_rom_solver_deim,
             self.hyper_rom_solver_ecsw,
+            self.hyper_rom_solver_ecm,
         ) = assign_properties(prob)
 
         cur_dir = os.getcwd()
@@ -818,6 +821,71 @@ class rom_simulation(_ThreadedSweepMixin):
             max_workers=max_workers,
             verbose=verbose,
             label="ECSW",
+            max_retries=max_retries,
+            retry_delay=retry_delay,
+            fail_fast=fail_fast,
+        )
+
+        hyp_solutions: List[np.ndarray] = [None] * n  # type: ignore
+        hyp_error: List[float] = [np.nan] * n
+        hyp_speed: List[float] = [np.nan] * n
+
+        for i in range(n):
+            if outs[i] is None:
+                continue
+            sol_hyp, err = outs[i]
+            hyp_solutions[i] = sol_hyp
+            hyp_error[i] = err
+            hyp_speed[i] = float(self.fos_test_time[i] / times[i]) if times[i] > 0 else np.nan
+
+        self.hyper_rom_solutions = hyp_solutions
+        self.hyper_rom_error = hyp_error
+        self.hyper_speed_up = hyp_speed
+        return self.hyper_rom_error, self.hyper_speed_up
+
+
+    def run_hyper_rom_simulation_ecm(
+        self,
+        z,
+        parallel: bool = True,
+        max_workers: Optional[int] = None,
+        verbose: bool = True,
+        max_retries: int = 1,
+        retry_delay: float = 0.5,
+        fail_fast: bool = True,
+        serial_first: bool = False,
+    ):
+        self.hyper_speed_up      = []
+        self.hyper_rom_error     = []
+        self.hyper_rom_solutions = []
+        self.z = z
+
+        n = min(self.N_rom_snap, len(self.param_list_test))
+        params = self.param_list_test[:n]
+        global_idx = self._test_global_idx[:n]
+
+        def worker(param, i_local, i_global):
+            self.cur_itr = i_local
+            sol_red_ = self.hyper_rom_solver_ecm(cls=self, param=param)
+            sol_hyp = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
+
+            sol_fos = self.fos_test_data[i_local]
+            sol_hyp = self._maybe_transpose_like(sol_hyp, sol_fos)
+            if sol_hyp.shape != sol_fos.shape:
+                raise ValueError(f"shape mismatch: fos{sol_fos.shape}, hyper{sol_hyp.shape}")
+
+            err = 100.0 * np.linalg.norm(sol_fos - sol_hyp) / np.linalg.norm(sol_fos)
+            return sol_hyp.copy(), float(err)
+
+        outs, times = self._threaded_sweep_serial_first(
+            params,
+            worker,
+            global_indices=global_idx,
+            parallel=parallel,
+            serial_first=serial_first,
+            max_workers=max_workers,
+            verbose=verbose,
+            label="ECM",
             max_retries=max_retries,
             retry_delay=retry_delay,
             fail_fast=fail_fast,

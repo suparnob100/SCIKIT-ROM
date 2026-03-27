@@ -344,6 +344,9 @@ class ProblemNonLinear(Problem):
                     maxit=500,
                     alpha = 1.0)
     
+    def hyper_rom_solver_ecm(self):
+        pass
+    
     def hyper_rom_solver_deim(self):
         pass
     

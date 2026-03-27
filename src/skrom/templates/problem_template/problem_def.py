@@ -236,3 +236,17 @@ class ProblemTemplate(Problem):
         param : ndarray or scalar   – parameter vector/value μ
         """
         raise NotImplementedError("Define hyper_rom_solver_ecsw(...)")
+    
+    def hyper_rom_solver_ecm(self, cls, param):
+        """
+        Solve the ECM hyper-reduced model.
+
+        Called automatically by the master class when an ECM-based simulation
+        is executed.
+
+        Parameters
+        ----------
+        cls : master_class object   – simulation context  
+        param : ndarray or scalar   – parameter vector/value μ
+        """
+        raise NotImplementedError("Define hyper_rom_solver_ecm(...)")

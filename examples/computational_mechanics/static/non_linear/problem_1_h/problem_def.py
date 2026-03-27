@@ -407,3 +407,6 @@ class ProblemNonLinear(Problem):
 
     def hyper_rom_solver_deim(self):
         pass
+
+    def hyper_rom_solver_ecm(self):
+        pass

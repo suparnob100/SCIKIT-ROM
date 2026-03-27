@@ -164,6 +164,10 @@ class ProblemMixed(Problem):
         """Solve hyper-reduced-order model for given parameters."""
     pass
 
+    def hyper_rom_solver_ecm(self):
+        """Solve hyper-reduced-order model for given parameters."""
+    pass
+
     def hyper_rom_solver_deim(self):
         """Solve hyper-reduced-order model for given parameters."""
     pass

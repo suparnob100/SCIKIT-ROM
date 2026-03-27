@@ -11,6 +11,8 @@ from skrom.rom.linear_form_rom import LinearFormROM
 from skrom.rom.rom_utils import newton_hyper_rom_solver, reconstruct_solution
 from skrom.rom.ecsw.bilinear_form_hyperrom_ecsw import BilinearFormHYPERROM_ecsw
 from skrom.rom.ecsw.linear_form_hyperrom_ecsw  import LinearFormHYPERROM_ecsw
+from skrom.rom.ecm.bilinear_form_hyperrom_ecm import BilinearFormHYPERROM_ecm
+from skrom.rom.ecm.linear_form_hyperrom_ecm  import LinearFormHYPERROM_ecm
 from skrom.rom.deim.bilinear_form_hyperrom_deim import BilinearFormHYPERROM_deim
 from skrom.rom.deim.linear_form_hyperrom_deim  import LinearFormHYPERROM_deim
 
@@ -332,6 +334,44 @@ class ProblemNonLinear(Problem):
 
         return newton_solver_rom(self.hyper_rom_operators_ecsw, self.u0, param = param, tol = 1e-2, maxit = 50)
     
+
+    def hyper_rom_operators_ecm(self, u, param):
+        """
+        Compute ECM hyper-reduced Jacobian and residual for given ROM state.
+        """
+        u_full = reconstruct_solution(u, self.U, self.T_ref)
+
+        kw = self.assemble_kwargs(u_full, param)
+        kw.update({'global_mask': self.global_mask})
+
+        self.residual_hyper = self.residual_hyper_red_ecm.assemble_weighted_ecm(**kw)
+        self.jac_hyper = self.jac_hyper_red_ecm.assemble_weighted_ecm(**kw)
+
+        return self.jac_hyper, self.residual_hyper
+
+    def hyper_rom_solver_ecm(self, cls, param):
+        """
+        Assemble ECM hyper-reduced operators on the first call and run Newton.
+        """
+        if cls.cur_itr == 0:
+            self.U, self.T_ref, self.n_sel, self.gauss_weights = cls.V_sel, cls.train_ref, cls.n_sel, cls.z
+
+            load_domain(self)
+            self.R, self.J_form = self.linear_forms()[0], self.bilinear_forms()[0]
+
+            self.residual_hyper_red_ecm = LinearFormHYPERROM_ecm(
+                self.R, self.gauss_weights, self.basis, self.U, free_dofs=self.free_dofs
+            )
+            self.jac_hyper_red_ecm = BilinearFormHYPERROM_ecm(
+                self.J_form, self.gauss_weights, self.basis, self.U, self.U,
+                free_dofs=self.free_dofs
+            )
+
+            self.elem_indices = np.nonzero(np.any(np.asarray(self.gauss_weights) > 0, axis=1))[0]
+            self.u0 = np.full(self.n_sel, 273.0)
+
+        return newton_solver_rom(self.hyper_rom_operators_ecm, self.u0, param=param, tol=1e-2, maxit=50)
+
     def hyper_rom_operators_deim(self, u, param):
         """
         Compute hyper-reduced Jacobian and residual for given ROM state.
@@ -401,4 +441,3 @@ class ProblemNonLinear(Problem):
             self.u0 = np.full(self.n_sel, 273.0)               # cold start
 
         return newton_solver_rom(self.hyper_rom_operators_deim, self.u0, param = param, tol = 0.01, maxit = 50,alpha=1.0)
-    

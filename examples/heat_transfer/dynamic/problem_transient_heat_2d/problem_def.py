@@ -221,5 +221,8 @@ class ProblemTransientHeat2D(Problem):
     def hyper_rom_solver_ecsw(self, cls, param):
         raise NotImplementedError("Hyper-reduction is intentionally omitted in this example.")
 
+    def hyper_rom_solver_ecm(self, cls, param):
+        raise NotImplementedError("Hyper-reduction is intentionally omitted in this example.")
+
     def hyper_rom_solver_deim(self, cls, param):
         raise NotImplementedError("Hyper-reduction is intentionally omitted in this example.")

@@ -12,4 +12,15 @@ gmsh
 sci_mplstyle_package @ file:./src/skrom/utils/visualization/sci_mplstyle_package
 
 [petsc311]
+
+[petsc311:python_version == "3.11" and sys_platform == "darwin" and platform_machine == "arm64"]
+petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-macosx_14_0_arm64.whl
+
+[petsc311:python_version == "3.11" and sys_platform == "linux" and platform_machine == "x86_64"]
+petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-manylinux_2_28_x86_64.whl
+
+[petsc311:python_version == "3.11" and sys_platform == "win32" and platform_machine == "AMD64"]
 petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-win_amd64.whl
+
+[petsc311:sys_platform == "win32"]
+mpi4py

@@ -4,14 +4,14 @@ Static reduced-order modeling (ROM) framework.
 TL;DR
 -----
 Runs an offline full-order FEM snapshot stage and an online reduced-order solve stage,
-with optional hyper-reduction (DEIM, ECSW) to lower cost while tracking error and speed.
+with optional hyper-reduction (DEIM, ECSW, ECM) to lower cost while tracking error and speed.
 
 The module defines:
 - a problem interface based on an abstract base class
 - a registry for problem classes and a factory to instantiate them
 - an offline workflow that runs full-order solves to generate snapshots
 - an online workflow that runs ROM and computes error and timing metrics
-- hooks for hyper-reduction workflows based on DEIM and ECSW
+- hooks for hyper-reduction workflows based on DEIM, ECSW, and ECM
 
 Notes
 -----
@@ -53,7 +53,7 @@ class Problem(ABC):
     - parameter-dependent coefficient evaluation
     - sampling of the parameter space
     - full-order and reduced-order solvers
-    - hyper-reduced solvers based on DEIM and ECSW
+    - hyper-reduced solvers based on DEIM, ECSW, and ECM
     """
     @abstractmethod
     def domain(self):
@@ -98,6 +98,11 @@ class Problem(ABC):
     @abstractmethod
     def hyper_rom_solver_ecsw(self):
         """Solve ECSW-based hyper-reduced system for given parameters."""
+        pass
+
+    @abstractmethod
+    def hyper_rom_solver_ecm(self):
+        """Solve ECM-based hyper-reduced system for given parameters."""
         pass
 
 
@@ -169,7 +174,8 @@ def assign_properties(prob: Problem) -> Tuple:
     properties : tuple
         Tuple with:
         (parameters, bilinear_forms, linear_forms, domain, properties,
-        fom_solver, rom_solver, hyper_deim_solver, hyper_ecsw_solver).
+        fom_solver, rom_solver, hyper_deim_solver, hyper_ecsw_solver,
+        hyper_ecm_solver).
     """
     parameters        = prob.parameters
     a                 = prob.bilinear_forms()
@@ -180,6 +186,7 @@ def assign_properties(prob: Problem) -> Tuple:
     rom_solver        = prob.rom_solver
     hyper_deim_solver = prob.hyper_rom_solver_deim
     hyper_ecsw_solver = prob.hyper_rom_solver_ecsw
+    hyper_ecm_solver  = prob.hyper_rom_solver_ecm
 
     return (
         parameters, a, l, domain_, properties,
@@ -187,6 +194,7 @@ def assign_properties(prob: Problem) -> Tuple:
         rom_solver,
         hyper_deim_solver,
         hyper_ecsw_solver,
+        hyper_ecm_solver,
     )
 
 
@@ -526,6 +534,7 @@ class rom_simulation:
             self.rom_solver,
             self.hyper_rom_solver_deim,
             self.hyper_rom_solver_ecsw,
+            self.hyper_rom_solver_ecm,
         ) = assign_properties(prob)
 
         # Load ROM data from disk
@@ -673,6 +682,56 @@ class rom_simulation:
 
             self.hyper_rom_solutions.append(sol_hyper.copy())
 
+            err = 100 * np.linalg.norm(sol_fos - sol_hyper) / np.linalg.norm(sol_fos)
+            self.hyper_rom_error.append(err)
+
+        return self.hyper_rom_error, self.hyper_speed_up
+
+
+    def run_hyper_rom_simulation_ecm(self, z):
+        """
+        Run ECM hyper-ROM evaluation on the test set.
+
+        Parameters
+        ----------
+        z : array_like
+            Dense ECM Gauss-point weights with shape ``(n_elements, n_q)``.
+
+        Returns
+        -------
+        hyper_rom_error : list of float
+            Relative error values in percent.
+        hyper_speed_up : list of float
+            Time ratios for each test case.
+        """
+        self.hyper_speed_up = []
+        self.hyper_rom_error = []
+        self.hyper_rom_solutions = []
+        self.z = z
+
+        for i, param in enumerate(self.param_list_test[:self.N_rom_snap]):
+            print(f"Snap {i+1}/{len(self.param_list_test)} params={param}")
+            self.cur_itr = i
+
+            t0 = time.perf_counter()
+            sol_red_ = self.hyper_rom_solver_ecm(cls=self, param=param)
+
+            if len(self.test_ref.shape) == 3:
+                sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.test_ref[i])
+            else:
+                sol_hyper = reconstruct_solution(sol_red_, self.V_sel, self.test_ref)
+
+            dt = time.perf_counter() - t0
+            self.hyper_speed_up.append(self.fos_test_time[i] / dt)
+
+            sol_fos = self.fos_test_data[i]
+            if sol_hyper.shape != sol_fos.shape and sol_hyper.ndim == 2 and sol_hyper.T.shape == sol_fos.shape:
+                sol_hyper = sol_hyper.T
+
+            if sol_hyper.shape != sol_fos.shape:
+                raise ValueError(f"shape mismatch: fos{sol_fos.shape}, hyper{sol_hyper.shape}")
+
+            self.hyper_rom_solutions.append(sol_hyper.copy())
             err = 100 * np.linalg.norm(sol_fos - sol_hyper) / np.linalg.norm(sol_fos)
             self.hyper_rom_error.append(err)
 

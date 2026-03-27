@@ -157,3 +157,7 @@ class ProblemAffinePlaneStress(Problem):
     def hyper_rom_solver_ecsw(self):
         """Not used in this example."""
         pass
+
+    def hyper_rom_solver_ecm(self):
+        """Not used in this example."""
+        pass

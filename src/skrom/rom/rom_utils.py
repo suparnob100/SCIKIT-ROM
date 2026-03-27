@@ -951,6 +951,57 @@ def collect_residuals(
     return q_mus
 
 
+
+def collect_residuals_ecm(
+    NLS_train_ms,
+    NLS_train_mean,
+    V_sel,
+    reconstruct_solution,
+    Residual,
+    training_params,
+    assemble_kwargs,
+    extra_kwargs=None,
+    hyper_basis=None,
+):
+    """
+    Evaluate and store ECM residual samples at the element–Gauss-point level.
+
+    For each snapshot this routine:
+    - projects the mean-shifted snapshot to reduced coordinates,
+    - reconstructs the full field,
+    - evaluates ``Residual.hyperreduction_ecm(**kw)``, and
+    - stacks the transposed result so each snapshot contributes a block of shape
+      ``(r, n_elements * n_q)``.
+
+    Returns
+    -------
+    q_mus_ecm : ndarray, shape (n_snapshots * r, n_elements * n_q)
+        Snapshot matrix used by ECM training.
+    """
+    q_mus_ecm = None
+
+    for i, u_arr_ms in enumerate(NLS_train_ms):
+        u_red = V_sel.T @ u_arr_ms
+        u_recon = reconstruct_solution(u_red, V_sel, NLS_train_mean)
+
+        if hyper_basis is not None:
+            u_rec = hyper_basis.interpolate(u_recon.flatten())
+        else:
+            u_rec = u_recon.flatten()
+
+        kw = assemble_kwargs(u_rec, training_params[i])
+        kw.update(extra_kwargs or {})
+
+        q = Residual.hyperreduction_ecm(**kw).T.copy()
+
+        if q_mus_ecm is None:
+            q_mus_ecm = q
+        else:
+            q_mus_ecm = np.concatenate((q_mus_ecm, q), axis=0)
+
+    return q_mus_ecm
+
+
 def collect_residuals_t(
     NLS_train_ms,
     NLS_train_mean,

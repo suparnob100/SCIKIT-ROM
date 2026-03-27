@@ -262,3 +262,7 @@ class ProblemAffine(Problem):
     def hyper_rom_solver_ecsw(self):
         """Solve hyper-reduced-order model for given parameters."""
     pass
+
+    def hyper_rom_solver_ecm(self):
+        """Solve hyper-reduced-order model for given parameters."""
+    pass
