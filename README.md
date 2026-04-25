@@ -9,12 +9,12 @@
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="85" align="right">
 </p> -->
 
-<table width="100%">
+<table style="width:100%;">
   <tr>
-    <td align="left">
+    <td style="text-align:left; width:50%;">
       <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="85">
     </td>
-    <td align="right">
+    <td style="text-align:right; width:50%;">
       <img src="docs/resources/images/iitism-logo.jpg" alt="IIT(ISM) Dhanbad" width="85">
     </td>
   </tr>
