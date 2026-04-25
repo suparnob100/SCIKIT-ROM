@@ -3,11 +3,22 @@
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="90" />
 </p> -->
 
-<p>
+<!--<p>
   <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="85" align="left">
-  <img src="https://via.placeholder.com/9999x1/ffffff/ffffff.png" alt="" width="99" height="85">
+  <img src="https://via.placeholder.com/9999x1/ffffff/ffffff.png" alt="" width="80" height="85">
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="85" align="right">
-</p>
+</p> -->
+
+<table width="100%">
+  <tr>
+    <td align="left">
+      <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="85">
+    </td>
+    <td align="right">
+      <img src="docs/resources/images/iitism-logo.jpg" alt="IIT(ISM) Dhanbad" width="85">
+    </td>
+  </tr>
+</table>
 
 
 # scikit-rom (skrom)
@@ -370,7 +381,7 @@ Min Rel L2 Error over time/parameter: 6.5942e-14
 
 **Python Version**
 
-* Requires **Python 3.8** or higher
+* Requires **Python 3.11** or higher
 
 **Core Dependencies**
 The project depends on the following libraries:
