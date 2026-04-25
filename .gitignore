@@ -11,5 +11,9 @@ examples/heat_transfer/dynamic/problem_3D_printing
 examples/heat_transfer/dynamic/problem_3D_printing_nu_mesh
 examples/heat_transfer/dynamic/problem_3D_printing_nu_mesh_HO
 examples/heat_transfer/static/linear/problem_2/ROM_data/
-examples/computational_mechanics/dynamic/linear/problem_beam_vibration_3d/ROM_data
-examples/computational_mechanics/dynamic/linear/problem_beam_vibration_eigenVP/ROM_data
+examples/computational_mechanics/dynamic/linear/problem_1/ROM_data
+examples/computational_mechanics/dynamic/linear/problem_2/ROM_data
+examples/heat_transfer/static/non_linear/problem_1_h/Paper_Figures
+examples/computational_mechanics/dynamic/linear/problem_beam_vibration_3d/Paper_Figuress
+examples/computational_mechanics/dynamic/linear/problem_1/Paper_Figures
+examples/computational_mechanics/static/non_linear/problem_1_h/Paper_Figure

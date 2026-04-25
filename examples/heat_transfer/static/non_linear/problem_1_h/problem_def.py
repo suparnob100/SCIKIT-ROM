@@ -6,7 +6,7 @@ import os
 from skfem import asm
 from skrom.fom.fem_utils import load_domain, newton_solver
 from skrom.rom.rom_utils import newton_solver_rom
-from skrom.problem_classes.static.master_class import register_problem, Problem
+from skrom.problem_classes.masterclass import register_problem, Problem
 from skrom.rom.linear_form_rom import LinearFormROM
 from skrom.rom.rom_utils import newton_hyper_rom_solver, reconstruct_solution
 from skrom.rom.ecsw.bilinear_form_hyperrom_ecsw import BilinearFormHYPERROM_ecsw

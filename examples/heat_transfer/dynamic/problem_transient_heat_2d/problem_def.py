@@ -26,7 +26,7 @@ from scipy.sparse import linalg as spla
 from skfem import asm
 
 from skrom.fom.fem_utils import load_domain
-from skrom.problem_classes.static.master_class import register_problem, Problem
+from skrom.problem_classes.masterclass import register_problem, Problem
 
 PROBLEM_NAME = os.path.basename(os.path.dirname(__file__))
 

@@ -1,7 +1,7 @@
 """
 Problem_1: Linear Elasticity in a static setting (Affine)
 """
-from skrom.problem_classes.static.master_class import register_problem, Problem
+from skrom.problem_classes.masterclass import register_problem, Problem
 import numpy as np
 import os
 from skrom.rom.rom_utils import _ensure_csr

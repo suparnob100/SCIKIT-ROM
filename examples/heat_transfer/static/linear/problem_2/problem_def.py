@@ -9,7 +9,7 @@ import os
 from skfem import asm, condense, solve       # FEM assembly and solvers
 from skrom.fom.fem_utils import load_domain
 from skrom.rom.rom_utils import _ensure_csr
-from skrom.problem_classes.static.master_class import register_problem, Problem
+from skrom.problem_classes.masterclass import register_problem, Problem
 
 PROBLEM_NAME = os.path.basename(os.path.dirname(__file__))
 

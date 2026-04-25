@@ -141,7 +141,7 @@ class deim:
         self.extra_modes = extra_modes            # Number of extra modes beyond tolerance selection
         self.F_nl = F_nl                          # Nonlinear force snapshot matrix
 
-    def select_elems(self):
+    def select_elems(self, sopt=False):
         """
         Select interpolation points and construct DEIM projection matrix.
 
@@ -200,7 +200,11 @@ class deim:
         U_fs = U_f[:, :n_f_sel]
         
         # Use the DEIM sampling strategy to select interpolation points
-        f_basis_sampled, sampled_rows = self.deim_red(U_f, n_f_sel)
+        
+        if sopt:
+            f_basis_sampled, sampled_rows, _ = self.sopt_red(U_f, n_f_sel)
+        else:
+            f_basis_sampled, sampled_rows = self.deim_red(U_f, n_f_sel)
 
         # Map selected DOF indices to element indicators
         # Elements containing any selected DOF are marked for assembly
@@ -321,3 +325,162 @@ class deim:
             f_basis_sampled[i, :] = f_basis[f_bv_max_global_row, :num_basis_vectors]
 
         return f_basis_sampled, sampled_rows
+    
+  
+    
+    def sopt_red(self, f_basis, num_f_basis_vectors_used):
+        """
+        S-OPT sampling: selects rows maximising the S-optimality measure
+        S(Z^T Q) which jointly maximises column orthogonality and determinant
+        of the information matrix (Z^T Q)^T (Z^T Q).
+
+        Uses efficient Sherman-Morrison rank-1 updates to avoid recomputing
+        determinants at every candidate evaluation.
+
+        Phase 1 (j < n_f): row + column expansion   — Slide 12/14 formula
+        Phase 2 (j >= n_f): row-only append (oversampling) — Slide 13/15 formula
+
+        Parameters
+        ----------
+        f_basis : ndarray (N, n_modes_total)
+            Full empirical basis from SVD of nonlinear snapshots.
+        num_f_basis_vectors_used : int
+            Number of basis vectors (modes) to use.
+
+        Returns
+        -------
+        f_sampled_row : ndarray
+            Rows of f_basis at the selected indices.
+        Z_indices : list of int
+            Selected row indices.
+        Z_boolean : ndarray of bool
+            Boolean mask of selected rows.
+
+        References
+        ----------
+        Shin & Xiu, SIAM J. Sci. Comput. 38 (2016), pp. A385-A411.
+        Lauzon et al., SIAM J. Sci. Comput. 46 (2024), arXiv:2203.16494.
+        """
+        num_sampling_points = num_f_basis_vectors_used + self.extra_modes
+        n_f = min(num_f_basis_vectors_used, f_basis.shape[1])
+        f_basis_trunc = f_basis[:, :n_f]
+
+        # Orthogonal basis via QR
+        Q, _ = np.linalg.qr(f_basis_trunc)
+        N = Q.shape[0]
+
+        # ── first index: largest |entry| in first column ──
+        i_star = int(np.argmax(np.abs(Q[:, 0])))
+        Z_indices = [i_star]
+        remaining = list(range(N))
+        remaining.remove(i_star)
+
+        # ════════════════════════════════════════════════════════════════
+        # Phase 1:  j = 1 .. n_f-1   (row + column expansion)
+        #
+        #   Ã = [A c; r^T γ]  =>
+        #   S(Ã)^{2(m+1)} = det(A^T A) · (1+r^Tb)/∏(||Ae_k||²+r_k²)
+        #                   · (c^Tc+γ²-α)/(c^Tc+γ²)
+        #   b=(A^TA)^{-1}r, g=(A^TA)^{-1}A^Tc,
+        #   α=(c^TA+γr^T)(I-(1+r^Tb)^{-1}br^T)(g+γb)
+        # ════════════════════════════════════════════════════════════════
+        for j in range(1, n_f):
+            sel = np.array(Z_indices)
+            m = len(sel)  # == j (square matrix A is m×m)
+
+            A_mat = Q[sel, :j]                          # (m, j)
+            G_inv = np.linalg.inv(A_mat.T @ A_mat)      # (j, j)
+            c_vec = Q[sel, j]                            # (m,)
+            g_vec = G_inv @ (A_mat.T @ c_vec)            # (j,)
+            col_sq = np.sum(A_mat ** 2, axis=0)          # (j,)
+            ctc = float(c_vec @ c_vec)
+
+            # Vectorised over candidates
+            cand = np.array(remaining)
+            R = Q[cand, :j]                              # (|cand|, j)
+            Gamma = Q[cand, j]                           # (|cand|,)
+
+            B = R @ G_inv                                # (|cand|, j)
+            rtb = np.sum(R * B, axis=1)                  # (|cand|,)
+
+            # factor1 = (1+r^Tb) / ∏(col_sq + r_k²)
+            log_f1 = (np.log(np.maximum(1.0 + rtb, 1e-300))
+                      - np.sum(np.log(col_sq[None, :] + R ** 2), axis=1))
+
+            ctA = c_vec @ A_mat                          # (j,)
+            denom2 = ctc + Gamma ** 2                    # (|cand|,)
+
+            scores = np.full(len(cand), -np.inf)
+            for ci in range(len(cand)):
+                if 1.0 + rtb[ci] <= 0:
+                    continue
+                ri = R[ci]
+                bi = B[ci]
+                gam = Gamma[ci]
+
+                vec1 = ctA + gam * ri
+                proj = np.eye(j) - np.outer(bi, ri) / (1.0 + rtb[ci])
+                alpha = vec1 @ proj @ (g_vec + gam * bi)
+
+                f2_num = ctc + gam ** 2 - alpha
+                if f2_num <= 0 or denom2[ci] <= 0:
+                    continue
+                scores[ci] = log_f1[ci] + np.log(f2_num) - np.log(denom2[ci])
+
+            best = cand[int(np.argmax(scores))]
+            Z_indices.append(best)
+            remaining.remove(best)
+
+        # ════════════════════════════════════════════════════════════════
+        # Phase 2:  oversampling (row-only append, j >= n_f)
+        #
+        #   Ã = [A; r^T]  =>
+        #   S(Ã)^{2p} = det(A^TA) · (1+r^T(A^TA)^{-1}r) / ∏(||Ae_k||²+r_k²)
+        #
+        #   det(A^TA) is constant across candidates, so maximise:
+        #       (1 + r^T G_inv r) / ∏(col_sq_k + r_k²)
+        #
+        #   G_inv updated via Sherman-Morrison after each selection.
+        # ════════════════════════════════════════════════════════════════
+        if num_sampling_points > n_f:
+            sel = np.array(Z_indices)
+            A_mat = Q[sel, :]                            # (|sel|, n_f)
+            G = A_mat.T @ A_mat
+            try:
+                G_inv = np.linalg.inv(G)
+            except np.linalg.LinAlgError:
+                G_inv = np.linalg.pinv(G)
+            col_sq = np.sum(A_mat ** 2, axis=0)          # (n_f,)
+
+            for _ in range(num_sampling_points - n_f):
+                cand = np.array(remaining)
+                R = Q[cand, :]                           # (|cand|, n_f)
+
+                # Vectorised score
+                V = R @ G_inv                            # (|cand|, n_f)
+                rtGr = np.sum(V * R, axis=1)
+                log_num = np.log(np.maximum(1.0 + rtGr, 1e-300))
+                log_den = np.sum(np.log(col_sq[None, :] + R ** 2), axis=1)
+                scores = log_num - log_den
+
+                bi = int(np.argmax(scores))
+                best = cand[bi]
+                r_best = R[bi]
+                v_best = V[bi]
+
+                Z_indices.append(best)
+                remaining.remove(best)
+
+                # Sherman-Morrison update
+                G_inv -= np.outer(v_best, v_best) / (1.0 + rtGr[bi])
+                col_sq += r_best ** 2
+
+        # ── pack outputs ──
+        Z_boolean = np.zeros(N, dtype=bool)
+        Z_boolean[Z_indices] = True
+        f_sampled_row = f_basis_trunc[Z_boolean, :]
+
+        print(f"{Z_indices=}")
+        return f_sampled_row, Z_indices, Z_boolean
+    
+    
