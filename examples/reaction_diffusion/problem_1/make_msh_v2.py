@@ -1,10 +1,10 @@
 import gmsh
 
 gmsh.initialize()
-gmsh.model.add("problem_6_mesh")
+gmsh.model.add("Problem_1_mesh")
 
-dx_max = 0.14
-dx_min = 0.07
+dx_max = 0.14/4
+dx_min = 0.07/4
 
 gmsh.option.setNumber("Geometry.OldNewReg", 0)
 gmsh.option.setNumber("Mesh.CharacteristicLengthMin", dx_min)
@@ -101,5 +101,5 @@ gmsh.model.setPhysicalName(1, pg_bnd, "boundary")
 # Mesh and save
 # ------------------------------------------------------------------
 gmsh.model.mesh.generate(2)
-gmsh.write("problem_6.msh")
+gmsh.write("Problem_1.msh")
 gmsh.finalize()
