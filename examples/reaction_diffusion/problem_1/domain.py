@@ -4,7 +4,7 @@ import numpy as np
 """
 def domain_():
     print("hersssssse")
-    mesh = MeshTri.load("problem_6.msh")
+    mesh = MeshTri.load("problem_1.msh")
 
 
     # ------------------------------------------------------------
