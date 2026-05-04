@@ -1,13 +1,12 @@
-"""
-hdf5_arraylist.py
+"""HDF5 array-list storage helpers.
 
-Utilities to store and retrieve a Python list of NumPy arrays with variable shapes
-in a single HDF5 file (chunked + compressed).
+TL;DR
+-----
+This module saves and loads lists of NumPy arrays with variable shapes in one HDF5 file.
 
-Dependencies
-------------
-- numpy
-- h5py
+Notes
+-----
+It provides a top-level utility copy of the HDF5 array-list storage API.
 """
 
 from __future__ import annotations
@@ -30,16 +29,56 @@ ArrayLike = Union[np.ndarray, Sequence[Any]]
 
 @dataclass(frozen=True)
 class H5ArrayListSpec:
-    """Naming spec for datasets in the group."""
+    """Naming spec for datasets in the group.
+    
+    TL;DR
+    -----
+    Naming spec for datasets in the group.
+    """
     group: str = "solutions"
     dataset_prefix: str = "sol"
     digits: int = 6
 
     def name(self, i: int) -> str:
+        """Return the dataset or group name stored in this specification.
+        
+        TL;DR
+        -----
+        Return the dataset or group name stored in this specification.
+        
+        Parameters
+        ----------
+        i : object
+            Value supplied as `i` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        The property gives callers a stable label for HDF5 storage.
+        """
         return f"{self.dataset_prefix}_{i:0{self.digits}d}"
 
 
 def _utc_now_iso() -> str:
+    """Return the current UTC time as an ISO-formatted string.
+    
+    TL;DR
+    -----
+    Return the current UTC time as an ISO-formatted string.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
@@ -54,9 +93,12 @@ def save_array_list_h5(
     overwrite: bool = True,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """
+    """Save a list of arrays (variable shapes allowed) into a single HDF5 file.
+    
+    TL;DR
+    -----
     Save a list of arrays (variable shapes allowed) into a single HDF5 file.
-
+    
     Parameters
     ----------
     filepath
@@ -76,10 +118,10 @@ def save_array_list_h5(
         If True, recreate the file. If False, update/replace the target group.
     metadata
         Optional dict stored as JSON in group attrs ("metadata_json").
-
+    
     Notes
     -----
-    - Do not load untrusted HDF5 files if your workflow executes code based on
+    - Do not load untrusted HDF5 files if downstream workflow code executes based on
       stored metadata. The array payload itself is data-only.
     """
     filepath = str(filepath)
@@ -119,7 +161,12 @@ def list_keys_h5(
     *,
     spec: H5ArrayListSpec = H5ArrayListSpec(),
 ) -> List[str]:
-    """Return dataset keys under the target group."""
+    """Return dataset keys under the target group.
+    
+    TL;DR
+    -----
+    Return dataset keys under the target group.
+    """
     filepath = str(filepath)
     with h5py.File(filepath, "r") as f:
         if spec.group not in f:
@@ -134,7 +181,12 @@ def load_array_h5(
     *,
     spec: H5ArrayListSpec = H5ArrayListSpec(),
 ) -> np.ndarray:
-    """Load a single array by index."""
+    """Load a single array by index.
+    
+    TL;DR
+    -----
+    Load a single array by index.
+    """
     filepath = str(filepath)
     with h5py.File(filepath, "r") as f:
         if spec.group not in f:
@@ -151,7 +203,10 @@ def iter_array_list_h5(
     *,
     spec: H5ArrayListSpec = H5ArrayListSpec(),
 ) -> Iterator[np.ndarray]:
-    """
+    """Iterate arrays one-by-one (reduces peak RAM versus loading all at once).
+    
+    TL;DR
+    -----
     Iterate arrays one-by-one (reduces peak RAM versus loading all at once).
     """
     filepath = str(filepath)
@@ -181,7 +236,12 @@ def load_array_list_h5(
     *,
     spec: H5ArrayListSpec = H5ArrayListSpec(),
 ) -> List[np.ndarray]:
-    """Load the full list into memory."""
+    """Load the full list into memory.
+    
+    TL;DR
+    -----
+    Load the full list into memory.
+    """
     return list(iter_array_list_h5(filepath, spec=spec))
 
 
@@ -190,7 +250,12 @@ def load_metadata_h5(
     *,
     spec: H5ArrayListSpec = H5ArrayListSpec(),
 ) -> Dict[str, Any]:
-    """Load optional metadata dict stored at save time; returns {} if absent."""
+    """Load optional metadata dict stored at save time; returns {} if absent.
+    
+    TL;DR
+    -----
+    Load optional metadata dict stored at save time; returns {} if absent.
+    """
     filepath = str(filepath)
     with h5py.File(filepath, "r") as f:
         if spec.group not in f:

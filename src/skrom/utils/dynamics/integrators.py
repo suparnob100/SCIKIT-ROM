@@ -1,9 +1,56 @@
+"""Time integration routines for dynamics.
+
+TL;DR
+-----
+This module implements Newmark and WBZ-alpha style integration for matrix-based dynamical systems.
+
+Notes
+-----
+The routines work with sparse matrices, damping, external forces, and initial displacement or velocity states.
+"""
+
 import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import splu
 
 
 def newmark_with_damping(M, C, K, force_free, times, U0=None, V0=None, beta=0.25, gamma=0.5):
+    """Integrate a damped second-order system with the Newmark method.
+    
+    TL;DR
+    -----
+    Integrate a damped second-order system with the Newmark method.
+    
+    Parameters
+    ----------
+    M : object
+        Value supplied as `M` for this helper.
+    C : object
+        Value supplied as `C` for this helper.
+    K : object
+        Value supplied as `K` for this helper.
+    force_free : object
+        Value supplied as `force_free` for this helper.
+    times : object
+        Value supplied as `times` for this helper.
+    U0 : object
+        Value supplied as `U0` for this helper.
+    V0 : object
+        Value supplied as `V0` for this helper.
+    beta : object
+        Value supplied as `beta` for this helper.
+    gamma : object
+        Value supplied as `gamma` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     M_mat = M.copy() if hasattr(M, "copy") else sp.csr_matrix(M)
     C_mat = C.copy() if hasattr(C, "copy") else sp.csr_matrix(C)
     K_mat = K.copy() if hasattr(K, "copy") else sp.csr_matrix(K)
@@ -22,6 +69,26 @@ def newmark_with_damping(M, C, K, force_free, times, U0=None, V0=None, beta=0.25
     a7 = gamma * dt
 
     def _flat(v):
+        """Convert vector-like data into a flat one-dimensional array.
+        
+        TL;DR
+        -----
+        Convert vector-like data into a flat one-dimensional array.
+        
+        Parameters
+        ----------
+        v : object
+            Value supplied as `v` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This keeps integrator state vectors in the expected one-dimensional shape.
+        """
         return v.A1 if hasattr(v, "A1") else np.asarray(v).ravel()
 
     # Factor M (CSC)
@@ -64,10 +131,13 @@ def newmark_with_damping(M, C, K, force_free, times, U0=None, V0=None, beta=0.25
 def wbz_alpha(M, C, K, force_free, times,
               U0=None, V0=None,
               gamma=0.5, beta=0.25, alpha_m=0.0):
-    """
-    Wood-Bossak-Zienkiewicz (WBZ-α) method.
+    """Wood-Bossak-Zienkiewicz (WBZ-α) method.
     Extension of Newmark method with algorithmic damping parameter alpha_m.
     alpha_m: numerical damping parameter (0 ≤ alpha_m ≤ 1)
+    
+    TL;DR
+    -----
+    Wood-Bossak-Zienkiewicz (WBZ-α) method.
     """
     M_mat = M.copy() if hasattr(M, 'copy') else sp.csr_matrix(M)
     C_mat = C.copy() if hasattr(C, 'copy') else sp.csr_matrix(C)
@@ -94,6 +164,26 @@ def wbz_alpha(M, C, K, force_free, times,
     K_fac = splu(K_eff if sp.issparse(K_eff) else sp.csr_matrix(K_eff))
 
     def _flat(v):
+        """Convert vector-like data into a flat one-dimensional array.
+        
+        TL;DR
+        -----
+        Convert vector-like data into a flat one-dimensional array.
+        
+        Parameters
+        ----------
+        v : object
+            Value supplied as `v` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This keeps integrator state vectors in the expected one-dimensional shape.
+        """
         return v.A1 if hasattr(v, "A1") else np.asarray(v).ravel()
 
     U = np.zeros((n, N))

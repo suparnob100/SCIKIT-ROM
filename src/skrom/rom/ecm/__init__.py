@@ -1,4 +1,13 @@
-"""ECM-based hyperreduction utilities for scikit-rom."""
+"""ECM hyper-reduction package.
+
+TL;DR
+-----
+This package exposes Empirical Cubature Method helpers and form assemblers.
+
+Notes
+-----
+It connects dense ECM weights, active element lookup, and weighted bilinear or linear assembly classes.
+"""
 
 from .helpers import (
     dense_ecm_weights,

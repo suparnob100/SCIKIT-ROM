@@ -1,20 +1,14 @@
+"""Reduced bilinear form assembly.
+
+TL;DR
+-----
+This module projects full-order element stiffness contributions onto a reduced basis.
+
+Notes
+-----
+It handles free and Dirichlet-constrained degrees of freedom, groups elements for efficient assembly, and returns reduced stiffness matrices.
 """
-Implements reduced-order bilinear form assembly for full-order to reduced-order transformations.
 
-This module provides:
-  - `BilinearFormROM`: a subclass of `skfem.assembly.form.bilinear_form.BilinearForm`
-    that projects full-order element stiffness matrices onto reduced bases,
-    groups elements by Dirichlet-free and mixed-Dirichlet sets for memory-efficient handling,
-    and assembles the global reduced stiffness matrix with optional chunked computation.
-
-The `rom` folder contains core tools for reduced-order modeling (ROM), including:
-  - Classes for projecting and assembling reduced-order bilinear and linear forms
-  - Utilities for handling Dirichlet boundary conditions in reduced spaces
-  - Chunked and clustered assembly routines to manage large-scale stiffness/load data
-  - Mapping utilities between full-order and reduced-order degrees of freedom
-
-  [Author: Suparno Bhattacharyya]
-"""
 import gc
 from typing import Optional
 from threading import Thread
@@ -32,13 +26,18 @@ from skfem.assembly.form.bilinear_form import BilinearForm
 
 
 class BilinearFormROM(BilinearForm):
-    """
-    BilinearFormROM
-
+    """BilinearFormROM
+    
+    TL;DR
+    -----
+    BilinearFormROM.
+    
+    Notes
+    -----
     Bilinear form that projects element stiffness matrices onto reduced bases
     and assembles the global reduced stiffness matrix, handling Dirichlet boundary
     conditions via mappings from full to free DOFs.
-
+    
     Attributes
     ----------
     lob : ndarray, shape (N_free, r) or (N, r)
@@ -91,9 +90,12 @@ class BilinearFormROM(BilinearForm):
         nthreads: int = 0,
         dtype: np.dtype = np.float64,
     ):
-        """
+        """Initialize the reduced-order bilinear form.
+        
+        TL;DR
+        -----
         Initialize the reduced-order bilinear form.
-
+        
         Parameters
         ----------
         form : callable
@@ -157,14 +159,17 @@ class BilinearFormROM(BilinearForm):
 
 
     def _get_mapping(self, ubasis: Basis) -> ndarray:
-        """
+        """Create mapping from full DOFs to reduced DOF indices.
+        
+        TL;DR
+        -----
         Create mapping from full DOFs to reduced DOF indices.
-
+        
         Parameters
         ----------
         ubasis : Basis
             Full-order finite element basis.
-
+        
         Returns
         -------
         mapping : ndarray, shape (N_full,)
@@ -183,19 +188,24 @@ class BilinearFormROM(BilinearForm):
 
     def assemble(self, vbasis: Optional[Basis] = None, **kwargs):
 
-        """
+        """Assemble the global reduced stiffness matrix.
+        
+        TL;DR
+        -----
         Assemble the global reduced stiffness matrix.
-
+        
+        Notes
+        -----
         Projects element stiffness matrices onto reduced bases and sums contributions
         over free DOFs only.
-
+        
         Parameters
         ----------
         vbasis : Basis, optional
             Finite element basis for test functions. Defaults to ubasis.
         **kwargs
             Additional parameters passed to the form during assembly.
-
+        
         Returns
         -------
         K_reduced : ndarray, shape (r, r)
@@ -216,6 +226,32 @@ class BilinearFormROM(BilinearForm):
 
         def compute_reduced_matrix(lob, rob, element_matrices,  dtype=np.float64):
 
+            """Compute the reduced matrix for the bilinear form.
+            
+            TL;DR
+            -----
+            Compute the reduced matrix for the bilinear form.
+            
+            Parameters
+            ----------
+            lob : object
+                Value supplied as `lob` for this helper.
+            rob : object
+                Value supplied as `rob` for this helper.
+            element_matrices : object
+                Value supplied as `element_matrices` for this helper.
+            dtype : object
+                Value supplied as `dtype` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             free_indices = self.free_indices
             mask = self.mask
 
@@ -246,6 +282,26 @@ class BilinearFormROM(BilinearForm):
 
             def compute_K_red_for_element(e):
 
+                """Compute one element contribution to the reduced stiffness matrix.
+                
+                TL;DR
+                -----
+                Compute one element contribution to the reduced stiffness matrix.
+                
+                Parameters
+                ----------
+                e : object
+                    Value supplied as `e` for this helper.
+                
+                Returns
+                -------
+                object
+                    Value produced by the helper.
+                
+                Notes
+                -----
+                This helper is part of the surrounding workflow and keeps behavior local to the caller.
+                """
                 idx = free_indices[:, e][mask[:, e]]
 
                 if idx.size == 0:
@@ -285,9 +341,12 @@ class BilinearFormROM(BilinearForm):
 
 
     def extract_element_matrices(self, ubasis: Basis, vbasis=None, **kwargs):
-        """
+        """Extract local element stiffness matrices for a given bilinear form.
+        
+        TL;DR
+        -----
         Extract local element stiffness matrices for a given bilinear form.
-
+        
         Parameters
         ----------
         form : BilinearForm
@@ -300,7 +359,7 @@ class BilinearFormROM(BilinearForm):
         kwargs : dict, optional
             Additional keyword arguments to be passed as extra parameters
             during the assembly process.
-
+        
         Returns
         -------
         element_matrices : ndarray

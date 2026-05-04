@@ -1,13 +1,12 @@
-"""
-The `utils` package aggregates frequently used libraries and helper routines for the pyHyperRom framework:
-  – Core imports for OS, filesystem, timing, and randomness
-  – Numerical & symbolic computing: NumPy, SciPy (dense & sparse), Sympy
-  – Finite‐element tools: scikit‐fem (`from skfem import *`), mesh I/O via meshio
-  – Linear algebra solvers: dense (LU), sparse (splu, spilu, CG), and multigrid (pyamg)
-  – Sampling & design‐of‐experiments: Sobol, Latin Hypercube (SciPy QMC & pyDOE)
-  – Plotting & visualization: Matplotlib (2D/3D, custom styles), ptitprince, and optional animation modules  
-  – Utilities for dynamic imports, path handling, and Cartesian products
-These imports and utilities ensure consistent, ready‐to‐use functionality across the entire reduced‐order modeling pipeline.
+"""Shared imports for scikit-rom modules.
+
+TL;DR
+-----
+This module centralizes common numerical, finite element, plotting, sampling, and optional PETSc imports.
+
+Notes
+-----
+It gives the rest of the package a broad convenience namespace while keeping optional dependency checks in one place.
 """
 
 # Import standard Python libraries for system interaction and time handling
@@ -51,6 +50,21 @@ from scipy.linalg import qr  # QR decomposition
 from scipy.sparse import issparse, csr_matrix
 
 def _petsc_is_available() -> bool:
+    """Check whether the optional PETSc solver stack is available.
+    
+    TL;DR
+    -----
+    Check whether the optional PETSc solver stack is available.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper keeps optional PETSc imports from being required at module import time.
+    """
     try:
         import petsc4py  # noqa: F401
         from petsc4py import PETSc  # noqa: F401

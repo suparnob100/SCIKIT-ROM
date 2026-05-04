@@ -1,22 +1,12 @@
-"""
-ECSW-based hyperreduction for finite element bilinear forms with element clustering.
-
-This module provides hyperreduction of bilinear forms using Energy-Conserving 
-Sampling and Weighting (ECSW) combined with intelligent element clustering for 
-efficient reduced-order stiffness assembly. It achieves dramatic computational 
-speedups by clustering elements by number of free DOFs for vectorized operations,
-extracting and projecting element stiffness blocks onto reduced bases with weights,
-and assembling global reduced matrices via vectorized Einstein summation.
+"""ECSW hyper-reduction for bilinear forms.
 
 TL;DR
 -----
-Enables substantial speedup in bilinear form assembly for ROMs while 
-preserving stability and energy conservation through intelligent element clustering
-and weighted assembly strategies.
+This module assembles reduced stiffness matrices with sparse ECSW element weights.
 
-Author
-------
-Suparno Bhattacharyya
+Notes
+-----
+It clusters active elements, projects local stiffness matrices, and accumulates weighted reduced operators.
 """
 
 
@@ -34,10 +24,11 @@ from numpy.typing import DTypeLike
 
 
 def with_elements(self, elements: Optional[Any] = None) -> 'FacetBasis':
-    """
-    Return a similar basis on a subset of element indices.
+    """Return a similar basis on a subset of element indices.
     
-    **TL;DR**: Creates a restricted FacetBasis containing only specified elements.
+    TL;DR
+    -----
+    Creates a restricted FacetBasis containing only specified elements.
     
     Parameters
     ----------
@@ -60,13 +51,14 @@ def with_elements(self, elements: Optional[Any] = None) -> 'FacetBasis':
 
 
 class BilinearFormHYPERROM_ecsw(BilinearForm):
-    """
-    ECSW-based hyperreduced bilinear form with element clustering for efficient assembly.
-
-    **TL;DR**: Dramatically accelerates bilinear form assembly substantially through 
-    energy-conserving element clustering and weighted sampling, providing both 
-    computational efficiency and numerical stability for real-time ROM applications.
-
+    """ECSW-based hyperreduced bilinear form with element clustering for efficient assembly.
+    
+    TL;DR
+    -----
+    Dramatically accelerates bilinear form assembly substantially through energy-conserving element clustering and weighted sampling, providing both computational efficiency and numerical stability for real-time ROM appli...
+    
+    Notes
+    -----
     This class implements a sophisticated hyperreduction strategy that combines 
     Energy-Conserving Sampling and Weighting (ECSW) with intelligent element 
     clustering to achieve massive computational savings while preserving crucial 
@@ -83,7 +75,7 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
     - Element distributions are relatively uniform (similar local DOF counts)
     - Computational stability is paramount for long-time integration
     - Real-time performance is required for control or optimization
-
+    
     Parameters
     ----------
     form : callable
@@ -116,7 +108,7 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         serial execution, positive values enable multi-threaded assembly
     dtype : numpy.dtype, default=np.float64
         Numerical precision for all computations and storage arrays
-
+    
     Attributes
     ----------
     lob : ndarray
@@ -171,12 +163,12 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
                  vbasis: Optional[Basis] = None, free_dofs: Optional[ndarray] = None,
                  mean: Optional[ndarray] = None, nthreads: int = 0,
                  dtype: DTypeLike = np.float64):
-        """
-        Initialize hyperreduced bilinear form with ECSW weights and element clustering.
-
-        **TL;DR**: Sets up element clustering, DOF mapping, and reduced basis projections
-        for efficient hyperreduced assembly.
-
+        """Initialize hyperreduced bilinear form with ECSW weights and element clustering.
+        
+        TL;DR
+        -----
+        Sets up element clustering, DOF mapping, and reduced basis projections for efficient hyperreduced assembly.
+        
         Parameters
         ----------
         form : callable
@@ -289,13 +281,14 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
                 self.w_cluster.append(self.weight[self.nonzero_elements][self.cluster_idx[-1]])
 
     def _get_mapping(self, basis: Basis) -> ndarray:
-        """
-        Build mapping from global DOFs to reduced basis indices for Dirichlet handling.
-
-        **TL;DR**: Creates efficient integer mapping that transforms global DOF 
-        indices to free DOF indices, enabling seamless boundary condition treatment 
-        in the reduced-order framework.
-
+        """Build mapping from global DOFs to reduced basis indices for Dirichlet handling.
+        
+        TL;DR
+        -----
+        Creates efficient integer mapping that transforms global DOF indices to free DOF indices, enabling seamless boundary condition treatment in the reduced-order framework.
+        
+        Notes
+        -----
         This method constructs a crucial data structure that enables efficient 
         handling of Dirichlet boundary conditions in the reduced-order context. 
         The mapping allows the algorithm to:
@@ -304,13 +297,13 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         - Map free DOFs to contiguous reduced basis indices [0, N_free-1]
         - Mark Dirichlet DOFs with sentinel value -1 for easy identification
         - Enable vectorized operations on free DOF subsets
-
+        
         Parameters
         ----------
         basis : Basis
             Finite element basis object containing total DOF count and connectivity.
             The basis.N attribute provides the total number of global DOFs
-
+        
         Returns
         -------
         mapping : ndarray of int, shape (N_full,)
@@ -328,53 +321,53 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
             return mapping
 
     def assemble_weighted_ecsw(self, **kwargs):
-        """
-        Assemble the globally weighted reduced stiffness matrix using ECSW.
-
-        **TL;DR**: Main assembly method that orchestrates element clustering, 
-        vectorized stiffness extraction, ECSW weighting, and reduced basis 
-        projection to produce the final r×r reduced-order stiffness matrix.
-
+        """Assemble the globally weighted reduced stiffness matrix using ECSW.
+        
+        TL;DR
+        -----
+        Main assembly method that orchestrates element clustering, vectorized stiffness extraction, ECSW weighting, and reduced basis projection to produce the final r×r reduced-order stiffness matrix.
+        
+        Notes
+        -----
         This method performs the complete ECSW hyperreduction assembly process 
         through a sophisticated multi-stage algorithm:
-
+        
         1. **Element Matrix Extraction**: Calls element extraction routines to 
            compute local stiffness matrices for all active elements, leveraging 
            parallel processing when available.
-
+        
         2. **Cluster-Based Processing**: Processes elements in clusters based on 
            their free DOF count, enabling highly efficient vectorized operations 
            and eliminating expensive Python loops.
-
+        
         3. **Submatrix Extraction**: For each cluster, extracts the free DOF 
            submatrices from local element matrices using advanced NumPy indexing 
            for maximum efficiency.
-
+        
         4. **ECSW Weighting**: Applies energy-conserving weights to preserve 
            physical properties while enabling computational reduction.
-
+        
         5. **Vectorized Contraction**: Uses Einstein summation to perform 
            parallel contractions over entire clusters: 
            A_reduced += Σ_e R_test[e]^T @ (w[e] * K_local[e]) @ R_trial[e]
-
+        
         The final result preserves the mathematical structure of the full-order 
         operator while achieving dramatic computational savings through intelligent 
         clustering and vectorization strategies.
-
+        
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed to element extraction routines
             for controlling assembly behavior, such as material parameters or 
             quadrature settings
-
+        
         Returns
         -------
         K_reduced : ndarray of shape (r, r)
             Assembled reduced-order stiffness matrix ready for use in ROM systems.
             This matrix preserves the energy conservation properties of the 
             full-order operator while enabling real-time evaluation
-        
         """
         element_matrices = self.extract_element_matrices_rom(self.ubasis_rom, self.vbasis_rom, elem_indices=self.nonzero_elements, **kwargs)
 
@@ -425,30 +418,31 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
                                      vbasis: Optional[Basis] = None,
                                      elem_indices: Optional[ndarray] = None,
                                      **kwargs) -> ndarray:
-        """
-        Extract element stiffness matrices for hyperreduced mesh assembly.
-
-        **TL;DR**: Computes local element stiffness matrices for the reduced 
-        element set using either serial or parallel execution, providing the 
-        fundamental building blocks for ECSW-weighted global assembly.
-
+        """Extract element stiffness matrices for hyperreduced mesh assembly.
+        
+        TL;DR
+        -----
+        Computes local element stiffness matrices for the reduced element set using either serial or parallel execution, providing the fundamental building blocks for ECSW-weighted global assembly.
+        
+        Notes
+        -----
         This method performs the core finite element integration to compute 
         element-level contributions to the global bilinear form. The integration 
         is performed only over elements selected by the hyperreduction strategy, 
         dramatically reducing computational cost while maintaining accuracy through 
         ECSW weighting.
-
+        
         The method supports both execution modes:
         
         - **Serial Mode** (nthreads=0): Sequential element-by-element computation
         - **Parallel Mode** (nthreads>0): Multi-threaded parallel element processing
-
+        
         For each element, the method evaluates the bilinear form:
         K_e[i,j] = ∫_Ω_e φ_i(x) * form * φ_j(x) dx
-
+        
         where φ_i, φ_j are basis functions and integration uses the quadrature 
         rules embedded in the finite element basis.
-
+        
         Parameters
         ----------
         ubasis : Basis
@@ -463,13 +457,13 @@ class BilinearFormHYPERROM_ecsw(BilinearForm):
         **kwargs : dict
             Additional keyword arguments passed to the bilinear form evaluation,
             such as material parameters or other problem-specific data
-
+        
         Returns
         -------
         element_matrices : ndarray of shape (n_elements, n_local_dofs, n_local_dofs)
             Array of local element stiffness matrices. Each element_matrices[e] 
             contains the n_local_dofs × n_local_dofs stiffness matrix for element e
-
+        
         Raises
         ------
         ValueError

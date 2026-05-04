@@ -1,3 +1,14 @@
+"""Plotting helpers for reduction weights.
+
+TL;DR
+-----
+This module plots DEIM and ECSW weights in compact 2D or 3D diagnostic views.
+
+Notes
+-----
+It includes stem plots, zoomed insets, barcodes, and small data-shaping helpers.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -25,9 +36,12 @@ def plot_deim_weights(
     zoom_box_linestyle: str = "--",
     zoom_box_linewidth: float = 1.0
 ):
-    """
-    Create a stem plot of `xi` with a zoomed inset.
+    """Create a stem plot of `xi` with a zoomed inset.
     Uses constrained_layout for automatic spacing.
+    
+    TL;DR
+    -----
+    Create a stem plot of `xi` with a zoomed inset.
     """
     # Use constrained_layout to avoid tight_layout warnings
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
@@ -79,6 +93,36 @@ def plot_ecsw_weights(
     xlabel: str = 'Mesh elements',
     ylabel: str = r'$\xi^*$'
 ):
+    """Plot ECSW weights for visual inspection.
+    
+    TL;DR
+    -----
+    Plot ECSW weights for visual inspection.
+    
+    Parameters
+    ----------
+    x_nnls_m : object
+        Value supplied as `x_nnls_m` for this helper.
+    figsize : object
+        Value supplied as `figsize` for this helper.
+    line_color : object
+        Value supplied as `line_color` for this helper.
+    stem_color : object
+        Value supplied as `stem_color` for this helper.
+    xlabel : object
+        Value supplied as `xlabel` for this helper.
+    ylabel : object
+        Value supplied as `ylabel` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     fig, ax = plt.subplots(figsize=figsize)
     xs = np.arange(len(x_nnls_m))
     markerline, stemlines, _ = ax.stem(
@@ -111,9 +155,12 @@ def plot_ecsw_weights_3d(
     zero_alpha: float = 0.3,
     weight_threshold: float = 1e-3
 ):
-    """
+    """Visualize ECSW weights on a 3D mesh, fading out near-zero weights.
+    
+    TL;DR
+    -----
     Visualize ECSW weights on a 3D mesh, fading out near-zero weights.
-
+    
     Parameters
     ----------
     mesh : object
@@ -132,7 +179,7 @@ def plot_ecsw_weights_3d(
     zero_alpha : alpha for zero_color points.
     weight_threshold :
         any w ≤ this will be considered “zero” for display.
-
+    
     Returns
     -------
     fig, ax
@@ -206,7 +253,71 @@ def barcode_plot(
     figsize=(9, 2.0),
     ax=None,
 ):
+    """Plot selected entries as a compact barcode view.
+    
+    TL;DR
+    -----
+    Plot selected entries as a compact barcode view.
+    
+    Parameters
+    ----------
+    training_params : object
+        Value supplied as `training_params` for this helper.
+    testing_params : object
+        Value supplied as `testing_params` for this helper.
+    x_min : object
+        Value supplied as `x_min` for this helper.
+    x_max : object
+        Value supplied as `x_max` for this helper.
+    dim : object
+        Value supplied as `dim` for this helper.
+    sort : object
+        Value supplied as `sort` for this helper.
+    clip_to_range : object
+        Value supplied as `clip_to_range` for this helper.
+    mode : object
+        Value supplied as `mode` for this helper.
+    test_offset : object
+        Value supplied as `test_offset` for this helper.
+    bar_size : object
+        Value supplied as `bar_size` for this helper.
+    bar_width : object
+        Value supplied as `bar_width` for this helper.
+    figsize : object
+        Value supplied as `figsize` for this helper.
+    ax : object
+        Value supplied as `ax` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     def _to_1d(p):
+        """Convert input data to a one-dimensional NumPy array.
+        
+        TL;DR
+        -----
+        Convert input data to a one-dimensional NumPy array.
+        
+        Parameters
+        ----------
+        p : object
+            Value supplied as `p` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         p = np.asarray(p)
         if p.ndim == 1:
             return p

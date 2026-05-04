@@ -1,19 +1,12 @@
-"""
-Helper utilities for ECM-based hyperreduction.
+"""ECM weight conversion helpers.
 
-This module converts ECM-selected Gauss-point data into dense per-element,
-per-Gauss-point arrays suitable for ROM assembly.
+TL;DR
+-----
+This module converts sparse ECM selections into dense per-element and per-Gauss-point weight arrays.
 
 Notes
 -----
-The bilinear and linear ECM assemblers in this folder assume that the stored
-ECM weights act as multiplicative factors on scikit-fem's native quadrature
-contributions, i.e. on quantities that already include ``basis.dx``.
-
-If an external ECM implementation returns *absolute* cubature weights for the
-reference quadrature rule, pass the reference Gauss weights through
-``base_quadrature_weights`` so that the helper divides by them and produces the
-multipliers expected by the assemblers.
+The helpers prepare active element lists and weight maps in the shape expected by ECM assemblers.
 """
 
 from __future__ import annotations
@@ -25,7 +18,12 @@ from skfem.assembly.basis import FacetBasis
 
 
 def with_elements(self, elements: Any = None) -> FacetBasis:
-    """Return a similar ``FacetBasis`` restricted to a subset of elements."""
+    """Return a similar ``FacetBasis`` restricted to a subset of elements.
+    
+    TL;DR
+    -----
+    Return a similar ``FacetBasis`` restricted to a subset of elements.
+    """
     return type(self)(
         self.mesh,
         self.elem,
@@ -37,7 +35,12 @@ def with_elements(self, elements: Any = None) -> FacetBasis:
 
 
 def _as_2d_array(data: ArrayLike, n_elements: int, n_gauss_points: int, dtype: DTypeLike) -> np.ndarray:
-    """Convert supported dense ECM-weight inputs to shape ``(n_elements, n_gauss_points)``."""
+    """Convert supported dense ECM-weight inputs to shape ``(n_elements, n_gauss_points)``.
+    
+    TL;DR
+    -----
+    Convert supported dense ECM-weight inputs to shape ``(n_elements, n_gauss_points)``.
+    """
     arr = np.asarray(data, dtype=dtype)
 
     if arr.ndim == 0:
@@ -70,9 +73,12 @@ def dense_ecm_weights(
     *,
     dtype: DTypeLike = np.float64,
 ) -> np.ndarray:
-    """
+    """Build a dense ECM-weight array of shape ``(n_elements, n_gauss_points)``.
+    
+    TL;DR
+    -----
     Build a dense ECM-weight array of shape ``(n_elements, n_gauss_points)``.
-
+    
     Parameters
     ----------
     weight_data
@@ -113,9 +119,12 @@ def flat_to_element_gauss_weights(
     base_quadrature_weights: ArrayLike | None = None,
     dtype: DTypeLike = np.float64,
 ) -> np.ndarray:
-    """
+    """Convert flat ECM-selected Gauss-point data to a dense element/Gauss array.
+    
+    TL;DR
+    -----
     Convert flat ECM-selected Gauss-point data to a dense element/Gauss array.
-
+    
     Parameters
     ----------
     n_elements
@@ -162,7 +171,12 @@ def flat_to_element_gauss_weights(
 
 
 def active_ecm_elements(weight_array: ArrayLike, *, atol: float = 0.0) -> np.ndarray:
-    """Return element indices whose ECM weight row has at least one active Gauss point."""
+    """Return element indices whose ECM weight row has at least one active Gauss point.
+    
+    TL;DR
+    -----
+    Return element indices whose ECM weight row has at least one active Gauss point.
+    """
     arr = np.asarray(weight_array)
     if arr.ndim != 2:
         raise ValueError("weight_array must be 2D with shape (n_elements, n_gauss_points).")

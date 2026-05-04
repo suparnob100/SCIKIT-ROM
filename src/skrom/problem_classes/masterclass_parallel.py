@@ -1,9 +1,12 @@
-"""
-Parallel implementation of master_class using multithreading for snapshot generation and ROM evaluation.
+"""Parallel reduced-order modeling workflow.
+
+TL;DR
+-----
+This module runs the same FOM, ROM, and hyper-ROM workflows as the static master class with threaded parameter sweeps.
 
 Notes
 -----
-Authors: Suparno Bhattacharyya
+It adds registry loading, retry helpers, checkpoint support, and worker routines for parallel snapshot generation and reduced simulations.
 """
 
 from __future__ import annotations
@@ -33,9 +36,14 @@ from skrom.rom.rom_utils import rom_data_gen, load_rom_data, reconstruct_solutio
 # WINDOWS-SAFE FILE HELPERS
 # ─────────────────────────────────────────────────────────────
 def _win_long_path(path):
-    """
+    """Return a Windows extended-length path when running on Windows.
+    
+    TL;DR
+    -----
     Return a Windows extended-length path when running on Windows.
-
+    
+    Notes
+    -----
     This avoids FileNotFoundError/OSError caused by long OneDrive/project paths
     during checkpoint writes. On non-Windows systems, it returns the normal
     absolute path string.
@@ -74,9 +82,14 @@ if not PROBLEM:
 
 
 def _detect_problem_dir(problem_name: str) -> Path:
-    """
+    """Locate the active problem directory.
+    
+    TL;DR
+    -----
     Locate the active problem directory.
-
+    
+    Notes
+    -----
     The usual workflow is to run from inside a folder named ``problem_*``.
     For script-based workflows, ``SKROM_PROBLEM_DIR`` may point directly to the
     folder containing ``problem_def.py``.
@@ -108,35 +121,210 @@ PROBLEM_DIR = _detect_problem_dir(PROBLEM)
 # PROBLEM REGISTRY AND INTERFACE
 # ─────────────────────────────────────────────────────────────
 class Problem(ABC):
+    """Define the abstract problem interface for this workflow.
+    
+    TL;DR
+    -----
+    Define the abstract problem interface for this workflow.
+    
+    Notes
+    -----
+    Subclasses or callers use this class through the surrounding workflow module.
+    """
     @abstractmethod
-    def domain(self): ...
+    def domain(self):
+        """Return the domain data required by the problem workflow.
+        
+        TL;DR
+        -----
+        Return the domain data required by the problem workflow.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def bilinear_forms(self): ...
+    def bilinear_forms(self):
+        """Return the bilinear forms used by the problem workflow.
+        
+        TL;DR
+        -----
+        Return the bilinear forms used by the problem workflow.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def linear_forms(self): ...
+    def linear_forms(self):
+        """Return the linear forms used by the problem workflow.
+        
+        TL;DR
+        -----
+        Return the linear forms used by the problem workflow.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def properties(self): ...
+    def properties(self):
+        """Return property values used by the problem workflow.
+        
+        TL;DR
+        -----
+        Return property values used by the problem workflow.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def parameters(self): ...
+    def parameters(self):
+        """Return parameter samples used by the problem workflow.
+        
+        TL;DR
+        -----
+        Return parameter samples used by the problem workflow.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def fom_solver(self): ...
+    def fom_solver(self):
+        """Run the full-order solver for one parameter value.
+        
+        TL;DR
+        -----
+        Run the full-order solver for one parameter value.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def rom_solver(self): ...
+    def rom_solver(self):
+        """Run the reduced-order solver for one parameter value.
+        
+        TL;DR
+        -----
+        Run the reduced-order solver for one parameter value.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def hyper_rom_solver_deim(self): ...
+    def hyper_rom_solver_deim(self):
+        """Run the DEIM hyper-reduced solver for one parameter value.
+        
+        TL;DR
+        -----
+        Run the DEIM hyper-reduced solver for one parameter value.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def hyper_rom_solver_ecsw(self): ...
+    def hyper_rom_solver_ecsw(self):
+        """Run the ECSW hyper-reduced solver for one parameter value.
+        
+        TL;DR
+        -----
+        Run the ECSW hyper-reduced solver for one parameter value.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
     @abstractmethod
-    def hyper_rom_solver_ecm(self): ...
+    def hyper_rom_solver_ecm(self):
+        """Run the ECM hyper-reduced solver for one parameter value.
+        
+        TL;DR
+        -----
+        Run the ECM hyper-reduced solver for one parameter value.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
+        ...
 
 
 PROBLEM_REGISTRY: Dict[str, Type[Problem]] = {}
 
 
 def _module_aliases() -> Tuple[str, ...]:
-    """
+    """Common names by which problem_def.py may import the master class module.
+    
+    TL;DR
+    -----
     Common names by which problem_def.py may import the master class module.
-
+    
+    Notes
+    -----
     Aliasing these names to this module prevents separate registry dictionaries
     when ``problem_def.py`` imports ``register_problem`` using a different path.
     """
@@ -151,6 +339,21 @@ def _module_aliases() -> Tuple[str, ...]:
 
 
 def _unify_masterclass_module_aliases() -> None:
+    """Keep master-class module aliases pointed at the same module object.
+    
+    TL;DR
+    -----
+    Keep master-class module aliases pointed at the same module object.
+    
+    Returns
+    -------
+    None
+        This function updates state or performs work in place.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     current_module = sys.modules[__name__]
     for alias in _module_aliases():
         if sys.modules.get(alias) is not current_module:
@@ -158,22 +361,80 @@ def _unify_masterclass_module_aliases() -> None:
 
 
 def register_problem(name: str):
-    """
+    """Register a problem class under a string key.
+    
+    TL;DR
+    -----
     Register a problem class under a string key.
     """
     def deco(cls: Type[Problem]) -> Type[Problem]:
+        """Register the decorated problem class.
+        
+        TL;DR
+        -----
+        Register the decorated problem class.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        The surrounding register function returns this decorator to store the class in the registry.
+        """
         PROBLEM_REGISTRY[name] = cls
         return cls
     return deco
 
 
 def _add_sys_path(p: Path) -> None:
+    """Add a directory to the Python import path when needed.
+    
+    TL;DR
+    -----
+    Add a directory to the Python import path when needed.
+    
+    Parameters
+    ----------
+    p : object
+        Value supplied as `p` for this helper.
+    
+    Returns
+    -------
+    None
+        This function updates state or performs work in place.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     sp = str(p)
     if sp and sp not in sys.path:
         sys.path.insert(0, sp)
 
 
 def _merge_registry_from_module_name(modname: str) -> None:
+    """Merge a problem registry from an imported module name.
+    
+    TL;DR
+    -----
+    Merge a problem registry from an imported module name.
+    
+    Parameters
+    ----------
+    modname : object
+        Value supplied as `modname` for this helper.
+    
+    Returns
+    -------
+    None
+        This function updates state or performs work in place.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     mod = sys.modules.get(modname)
     if mod is None:
         return
@@ -183,14 +444,32 @@ def _merge_registry_from_module_name(modname: str) -> None:
 
 
 def _merge_known_registries() -> None:
+    """Merge known problem registries into the active registry.
+    
+    TL;DR
+    -----
+    Merge known problem registries into the active registry.
+    
+    Returns
+    -------
+    None
+        This function updates state or performs work in place.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     for modname in _module_aliases():
         _merge_registry_from_module_name(modname)
 
 
 def _auto_register_problem_from_module(module, name: str) -> None:
-    """
-    Fallback registration for a local ``problem_def.py`` that defines one
+    """Fallback registration for a local ``problem_def.py`` that defines one
     concrete problem class but does not explicitly use ``@register_problem``.
+    
+    TL;DR
+    -----
+    Fallback registration for a local ``problem_def.py`` that defines one.
     """
     if name in PROBLEM_REGISTRY:
         return
@@ -233,9 +512,14 @@ def _auto_register_problem_from_module(module, name: str) -> None:
 
 
 def _load_local_problem_def(problem_name: str) -> None:
-    """
+    """Import ``problem_def.py`` from the active problem folder.
+    
+    TL;DR
+    -----
     Import ``problem_def.py`` from the active problem folder.
-
+    
+    Notes
+    -----
     Importing the file executes any ``@register_problem(...)`` decorator.
     The module is loaded under a unique name so notebook re-runs do not reuse a
     stale ``problem_def`` module from a previous problem folder.
@@ -272,9 +556,14 @@ def _load_local_problem_def(problem_name: str) -> None:
 
 
 def ensure_problem_registered(problem_name: str) -> None:
-    """
+    """Ensure that the requested problem is present in ``PROBLEM_REGISTRY``.
+    
+    TL;DR
+    -----
     Ensure that the requested problem is present in ``PROBLEM_REGISTRY``.
-
+    
+    Notes
+    -----
     This handles the common case where the problem class lives in the local
     ``problem_def.py`` file and has not been imported yet.
     """
@@ -298,6 +587,26 @@ def ensure_problem_registered(problem_name: str) -> None:
     _add_sys_path(cwd)
 
     def _try_import(modname: str) -> None:
+        """Try to import a module and return the loaded module when possible.
+        
+        TL;DR
+        -----
+        Try to import a module and return the loaded module when possible.
+        
+        Parameters
+        ----------
+        modname : object
+            Value supplied as `modname` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         attempted.append(modname)
         try:
             mod = importlib.import_module(modname)
@@ -332,6 +641,26 @@ def ensure_problem_registered(problem_name: str) -> None:
 
 
 def get_problem(name: str) -> Problem:
+    """Create a registered problem instance by name.
+    
+    TL;DR
+    -----
+    Create a registered problem instance by name.
+    
+    Parameters
+    ----------
+    name : object
+        Value supplied as `name` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     ensure_problem_registered(name)
     try:
         return PROBLEM_REGISTRY[name]()
@@ -340,6 +669,26 @@ def get_problem(name: str) -> Problem:
 
 
 def assign_properties(prob: Problem) -> Tuple:
+    """Evaluate problem properties for a collection of parameter values.
+    
+    TL;DR
+    -----
+    Evaluate problem properties for a collection of parameter values.
+    
+    Parameters
+    ----------
+    prob : object
+        Value supplied as `prob` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     parameters        = prob.parameters
     a                 = prob.bilinear_forms()
     l                 = prob.linear_forms()
@@ -360,21 +709,106 @@ def assign_properties(prob: Problem) -> Tuple:
 # PARALLEL SWEEP CORE (THREADS ONLY)
 # ─────────────────────────────────────────────────────────────
 class _ThreadedSweepMixin:
+    """Provide shared helpers for threaded parameter sweeps.
+    
+    TL;DR
+    -----
+    Provide shared helpers for threaded parameter sweeps.
+    
+    Notes
+    -----
+    Subclasses or callers use this class through the surrounding workflow module.
+    """
     def __init__(self, logger: Optional[logging.Logger] = None):
+        """Initialize the ThreadedSweepMixin instance.
+        
+        TL;DR
+        -----
+        Initialize the ThreadedSweepMixin instance.
+        
+        Parameters
+        ----------
+        logger : object
+            Value supplied as `logger` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self._cur_itr_var = contextvars.ContextVar("cur_itr", default=None)
         self._print_lock = threading.Lock()
         self.logger = logger or LOGGER
 
     @property
     def cur_itr(self) -> Optional[int]:
+        """Return the current iteration index.
+        
+        TL;DR
+        -----
+        Return the current iteration index.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         return self._cur_itr_var.get()
 
     @cur_itr.setter
     def cur_itr(self, v: int) -> None:
+        """Set the current iteration index.
+        
+        TL;DR
+        -----
+        Set the current iteration index.
+        
+        Parameters
+        ----------
+        v : object
+            Value supplied as `v` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self._cur_itr_var.set(v)
 
     @contextmanager
     def _set_cur_itr(self, v: int):
+        """Store the current iteration index for the active worker context.
+        
+        TL;DR
+        -----
+        Store the current iteration index for the active worker context.
+        
+        Parameters
+        ----------
+        v : object
+            Value supplied as `v` for this helper.
+        
+        Yields
+        ------
+        object
+            Values produced by the iterator.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         token = self._cur_itr_var.set(v)
         try:
             yield
@@ -383,6 +817,26 @@ class _ThreadedSweepMixin:
 
     @staticmethod
     def _copy_solution(sol: Any) -> Any:
+        """Copy solution data so worker-local updates do not share mutable arrays.
+        
+        TL;DR
+        -----
+        Copy solution data so worker-local updates do not share mutable arrays.
+        
+        Parameters
+        ----------
+        sol : object
+            Value supplied as `sol` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         if isinstance(sol, tuple):
             return tuple(np.copy(x) if isinstance(x, np.ndarray) else x for x in sol)
         if isinstance(sol, np.ndarray):
@@ -390,6 +844,30 @@ class _ThreadedSweepMixin:
         return sol
 
     def _log(self, msg: str, level: int = logging.INFO, verbose: bool = True):
+        """Write a progress message through the configured logger.
+        
+        TL;DR
+        -----
+        Write a progress message through the configured logger.
+        
+        Parameters
+        ----------
+        msg : object
+            Value supplied as `msg` for this helper.
+        level : object
+            Value supplied as `level` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         if not verbose:
             return
         with self._print_lock:
@@ -413,6 +891,44 @@ class _ThreadedSweepMixin:
         retry_delay: float = 0.5,
         fail_fast: bool = True,
     ) -> Tuple[List[Any], List[float]]:
+        """Run a parameter sweep with threaded worker execution.
+        
+        TL;DR
+        -----
+        Run a parameter sweep with threaded worker execution.
+        
+        Parameters
+        ----------
+        params : object
+            Value supplied as `params` for this helper.
+        worker_fn : object
+            Value supplied as `worker_fn` for this helper.
+        global_indices : object
+            Value supplied as `global_indices` for this helper.
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        label : object
+            Value supplied as `label` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        The caller supplies the per-item worker function and the sweep handles scheduling details.
+        """
         n = len(params)
         if global_indices is None:
             global_indices = np.arange(n, dtype=int)
@@ -425,6 +941,26 @@ class _ThreadedSweepMixin:
         times: List[float] = [0.0] * n
 
         def run_one(i_local: int):
+            """Run one item from a simulation sweep.
+            
+            TL;DR
+            -----
+            Run one item from a simulation sweep.
+            
+            Parameters
+            ----------
+            i_local : object
+                Value supplied as `i_local` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             i_global = int(global_indices[i_local])
             param = params[i_local]
             print(f"Running {param=}")
@@ -508,9 +1044,14 @@ class _ThreadedSweepMixin:
         label: str,
         verbose: bool,
     ):
-        """
+        """Run one parameter case in the main thread before launching the threaded sweep.
+        
+        TL;DR
+        -----
         Run one parameter case in the main thread before launching the threaded sweep.
-
+        
+        Notes
+        -----
         This is useful for solvers that perform one-time initialization, caching, JIT
         compilation, library setup, or file-system setup on the first call.
         """
@@ -577,9 +1118,14 @@ class _ThreadedSweepMixin:
         retry_delay: float,
         fail_fast: bool,
     ):
-        """
+        """Run the first parameter case serially and run the remaining cases in threads.
+        
+        TL;DR
+        -----
         Run the first parameter case serially and run the remaining cases in threads.
-
+        
+        Notes
+        -----
         If ``serial_first`` is False, or ``parallel`` is False, this falls back to
         ``_threaded_sweep`` and preserves the previous behavior.
         """
@@ -621,6 +1167,30 @@ class _ThreadedSweepMixin:
         # 2) Run the remaining cases in parallel. Shift the local index by one so
         # downstream code still sees the same local indexing as the full parameter list.
         def worker_rest(param, i_local_rest, i_global_rest):
+            """Process the remaining work items assigned to a worker loop.
+            
+            TL;DR
+            -----
+            Process the remaining work items assigned to a worker loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local_rest : object
+                Value supplied as `i_local_rest` for this helper.
+            i_global_rest : object
+                Value supplied as `i_global_rest` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the threaded sweep helper that defines it.
+            """
             return worker(param, i_local_rest + 1, i_global_rest)
 
         outs_rest, times_rest = self._threaded_sweep(
@@ -656,7 +1226,39 @@ import numpy as np
 
 
 class fom_simulation(_ThreadedSweepMixin):
+    """Run full-order simulations over parameter samples.
+    
+    TL;DR
+    -----
+    Run full-order simulations over parameter samples.
+    
+    Notes
+    -----
+    Subclasses or callers use this class through the surrounding workflow module.
+    """
     def __init__(self, num_snapshots: int = 32, logger: Optional[logging.Logger] = None):
+        """Initialize the full-order model simulation instance.
+        
+        TL;DR
+        -----
+        Initialize the full-order model simulation instance.
+        
+        Parameters
+        ----------
+        num_snapshots : object
+            Value supplied as `num_snapshots` for this helper.
+        logger : object
+            Value supplied as `logger` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         super().__init__(logger=logger)
 
         prob = get_problem(PROBLEM)
@@ -698,11 +1300,58 @@ class fom_simulation(_ThreadedSweepMixin):
         fail_fast: bool = True,
         serial_first: bool = False,
     ) -> None:
+        """Run the full-order simulation workflow.
+        
+        TL;DR
+        -----
+        Run the full-order simulation workflow.
+        
+        Parameters
+        ----------
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        serial_first : object
+            Value supplied as `serial_first` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         cur_dir = Path(os.getcwd())
         ckpt_dir = cur_dir / "fos_checkpoints"
         ckpt_dir.mkdir(parents=True, exist_ok=True)
 
         def _problem_tag() -> str:
+            """Build a stable text tag for a problem instance.
+            
+            TL;DR
+            -----
+            Build a stable text tag for a problem instance.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             return (
                 getattr(self, "PROBLEM_NAME", None)
                 or getattr(self, "problem_name", None)
@@ -711,6 +1360,26 @@ class fom_simulation(_ThreadedSweepMixin):
 
         def _param_bytes(param) -> bytes:
             # numeric params -> stable bytes; fallback -> stable JSON bytes
+            """Serialize parameter data into bytes for stable checkpoint keys.
+            
+            TL;DR
+            -----
+            Serialize parameter data into bytes for stable checkpoint keys.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             try:
                 arr = np.asarray(param, dtype=float).ravel()
                 return arr.tobytes()
@@ -720,6 +1389,26 @@ class fom_simulation(_ThreadedSweepMixin):
 
         def _param_store(param):
             # store param in file for inspection
+            """Build the parameter data stored with a checkpoint.
+            
+            TL;DR
+            -----
+            Build the parameter data stored with a checkpoint.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             try:
                 return np.asarray(param, dtype=float).ravel()
             except Exception:
@@ -727,9 +1416,49 @@ class fom_simulation(_ThreadedSweepMixin):
                 return np.array([js], dtype="U")
 
         def _param_hash(param) -> str:
+            """Build a short hash for a parameter sample.
+            
+            TL;DR
+            -----
+            Build a short hash for a parameter sample.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             return hashlib.sha1(_param_bytes(param)).hexdigest()[:16]
 
         def _ckpt_path(param) -> Path:
+            """Build the checkpoint path for a parameter sample.
+            
+            TL;DR
+            -----
+            Build the checkpoint path for a parameter sample.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             h = _param_hash(param)
             # short filename to avoid Windows path issues
             return ckpt_dir / f"fos_{_problem_tag()}_h{h}.npz"
@@ -737,6 +1466,28 @@ class fom_simulation(_ThreadedSweepMixin):
         def _atomic_save_npz(path: Path, payload: dict):
             # Use a short temp prefix and Windows extended-length paths to avoid
             # FileNotFoundError/OSError in long OneDrive project folders.
+            """Save compressed NumPy data through an atomic file replacement.
+            
+            TL;DR
+            -----
+            Save compressed NumPy data through an atomic file replacement.
+            
+            Parameters
+            ----------
+            path : object
+                Value supplied as `path` for this helper.
+            payload : object
+                Value supplied as `payload` for this helper.
+            
+            Returns
+            -------
+            None
+                This function updates state or performs work in place.
+            
+            Notes
+            -----
+            The temporary file is moved into place so incomplete writes are less likely to leave a broken checkpoint.
+            """
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -767,6 +1518,34 @@ class fom_simulation(_ThreadedSweepMixin):
                         pass
 
         def _save_solution(path: Path, sol, param, elapsed: float, snap_index: int):
+            """Save a computed solution to the checkpoint store.
+            
+            TL;DR
+            -----
+            Save a computed solution to the checkpoint store.
+            
+            Parameters
+            ----------
+            path : object
+                Value supplied as `path` for this helper.
+            sol : object
+                Value supplied as `sol` for this helper.
+            param : object
+                Value supplied as `param` for this helper.
+            elapsed : object
+                Value supplied as `elapsed` for this helper.
+            snap_index : object
+                Value supplied as `snap_index` for this helper.
+            
+            Returns
+            -------
+            None
+                This function updates state or performs work in place.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             payload = {
                 "snap_index": np.array([snap_index], dtype=np.int64),
                 "solve_time": np.array([elapsed], dtype=float),
@@ -784,6 +1563,26 @@ class fom_simulation(_ThreadedSweepMixin):
             _atomic_save_npz(path, payload)
 
         def _load_solution(path: Path):
+            """Load a computed solution from the checkpoint store.
+            
+            TL;DR
+            -----
+            Load a computed solution from the checkpoint store.
+            
+            Parameters
+            ----------
+            path : object
+                Value supplied as `path` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             with np.load(path, allow_pickle=False) as data:
                 nsol = int(data["nsol"][0]) if "nsol" in data.files else 1
                 t = float(data["solve_time"][0]) if "solve_time" in data.files else np.nan
@@ -794,6 +1593,30 @@ class fom_simulation(_ThreadedSweepMixin):
             return sol, t
 
         def worker(param, i_local, i_global):
+            """Run one worker task for the surrounding simulation loop.
+            
+            TL;DR
+            -----
+            Run one worker task for the surrounding simulation loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local : object
+                Value supplied as `i_local` for this helper.
+            i_global : object
+                Value supplied as `i_global` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the simulation method that defines it.
+            """
             path = _ckpt_path(param)
 
             # resume
@@ -856,6 +1679,16 @@ class fom_simulation(_ThreadedSweepMixin):
 # ONLINE ROM EVALUATION
 # ─────────────────────────────────────────────────────────────
 class rom_simulation(_ThreadedSweepMixin):
+    """Run reduced and hyper-reduced simulations over parameter samples.
+    
+    TL;DR
+    -----
+    Run reduced and hyper-reduced simulations over parameter samples.
+    
+    Notes
+    -----
+    Subclasses or callers use this class through the surrounding workflow module.
+    """
     def __init__(
         self,
         train_ref=None, test_ref = None, fos_solutions=None,
@@ -863,6 +1696,42 @@ class rom_simulation(_ThreadedSweepMixin):
         V_sel=None, n_sel=None, N_rom_snap=None,
         logger: Optional[logging.Logger] = None,
     ):
+        """Initialize the reduced-order model simulation instance.
+        
+        TL;DR
+        -----
+        Initialize the reduced-order model simulation instance.
+        
+        Parameters
+        ----------
+        train_ref : object
+            Value supplied as `train_ref` for this helper.
+        test_ref : object
+            Value supplied as `test_ref` for this helper.
+        fos_solutions : object
+            Value supplied as `fos_solutions` for this helper.
+        train_mask : object
+            Value supplied as `train_mask` for this helper.
+        test_mask : object
+            Value supplied as `test_mask` for this helper.
+        V_sel : object
+            Value supplied as `V_sel` for this helper.
+        n_sel : object
+            Value supplied as `n_sel` for this helper.
+        N_rom_snap : object
+            Value supplied as `N_rom_snap` for this helper.
+        logger : object
+            Value supplied as `logger` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         super().__init__(logger=logger)
 
         prob = get_problem(PROBLEM)
@@ -911,6 +1780,28 @@ class rom_simulation(_ThreadedSweepMixin):
         self._test_global_idx = np.flatnonzero(self.test_mask)
 
     def _ref_for(self, i_local_test: int, i_global_param: int):
+        """Return the reference solution used for error comparison.
+        
+        TL;DR
+        -----
+        Return the reference solution used for error comparison.
+        
+        Parameters
+        ----------
+        i_local_test : object
+            Value supplied as `i_local_test` for this helper.
+        i_global_param : object
+            Value supplied as `i_global_param` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         if hasattr(self.test_ref, "ndim") and self.test_ref.ndim == 3:
             if self.test_ref.shape[0] == len(self.param_list):
                 return self.test_ref[i_global_param]
@@ -921,6 +1812,28 @@ class rom_simulation(_ThreadedSweepMixin):
 
     @staticmethod
     def _maybe_transpose_like(sol_candidate: np.ndarray, sol_ref: np.ndarray) -> np.ndarray:
+        """Transpose an array only when that matches the reference shape.
+        
+        TL;DR
+        -----
+        Transpose an array only when that matches the reference shape.
+        
+        Parameters
+        ----------
+        sol_candidate : object
+            Value supplied as `sol_candidate` for this helper.
+        sol_ref : object
+            Value supplied as `sol_ref` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This keeps shape fixes local and avoids transposing data that already matches.
+        """
         if sol_candidate.shape != sol_ref.shape and sol_candidate.ndim == 2 and sol_candidate.T.shape == sol_ref.shape:
             return sol_candidate.T
         return sol_candidate
@@ -939,6 +1852,42 @@ class rom_simulation(_ThreadedSweepMixin):
         label: str,
         verbose: bool,
     ):
+        """Run one simulation item serially with retry handling.
+        
+        TL;DR
+        -----
+        Run one simulation item serially with retry handling.
+        
+        Parameters
+        ----------
+        worker : object
+            Value supplied as `worker` for this helper.
+        param : object
+            Value supplied as `param` for this helper.
+        i_local : object
+            Value supplied as `i_local` for this helper.
+        i_global : object
+            Value supplied as `i_global` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        label : object
+            Value supplied as `label` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         last_exc = None
         for attempt in range(max_retries + 1):
             t0 = time.perf_counter()
@@ -988,11 +1937,51 @@ class rom_simulation(_ThreadedSweepMixin):
         retry_delay: float,
         fail_fast: bool,
     ):
+        """Run the first sweep item serially before launching threaded work.
+        
+        TL;DR
+        -----
+        Run the first sweep item serially before launching threaded work.
+        
+        Parameters
+        ----------
+        params : object
+            Value supplied as `params` for this helper.
+        worker : object
+            Value supplied as `worker` for this helper.
+        global_indices : object
+            Value supplied as `global_indices` for this helper.
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        serial_first : object
+            Value supplied as `serial_first` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        label : object
+            Value supplied as `label` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        Running one item first can initialize shared state before the threaded section starts.
+        """
         n = len(params)
         if n == 0:
             return [], []
 
-        # default: your existing behavior
+        # Default path keeps the standard sweep behavior.
         if (not parallel) or (not serial_first) or (n == 1):
             return self._threaded_sweep(
                 params,
@@ -1024,9 +2013,33 @@ class rom_simulation(_ThreadedSweepMixin):
             verbose=verbose,
         )
 
-        # 2) run the remaining items with your threaded sweep
+        # 2) run the remaining items with the threaded sweep
         def worker_rest(param, i_local_rest, i_global_rest):
             # IMPORTANT: shift local index by +1 to keep alignment with fos_test_data
+            """Process the remaining work items assigned to a worker loop.
+            
+            TL;DR
+            -----
+            Process the remaining work items assigned to a worker loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local_rest : object
+                Value supplied as `i_local_rest` for this helper.
+            i_global_rest : object
+                Value supplied as `i_global_rest` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the threaded sweep helper that defines it.
+            """
             return worker(param, i_local_rest + 1, i_global_rest)
 
         outs_rest, times_rest = self._threaded_sweep(
@@ -1059,6 +2072,42 @@ class rom_simulation(_ThreadedSweepMixin):
         fail_fast: bool = True,
         serial_first: bool = False,
     ):
+        """Run the reduced-order simulation workflow.
+        
+        TL;DR
+        -----
+        Run the reduced-order simulation workflow.
+        
+        Parameters
+        ----------
+        full_order : object
+            Value supplied as `full_order` for this helper.
+        new_params : object
+            Value supplied as `new_params` for this helper.
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        serial_first : object
+            Value supplied as `serial_first` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self.speed_up      = []
         self.rom_error     = []
         self.rom_solutions = []
@@ -1072,6 +2121,30 @@ class rom_simulation(_ThreadedSweepMixin):
             global_idx = self._test_global_idx[:n]
 
             def worker(param, i_local, i_global):
+                """Run one worker task for the surrounding simulation loop.
+                
+                TL;DR
+                -----
+                Run one worker task for the surrounding simulation loop.
+                
+                Parameters
+                ----------
+                param : object
+                    Value supplied as `param` for this helper.
+                i_local : object
+                    Value supplied as `i_local` for this helper.
+                i_global : object
+                    Value supplied as `i_global` for this helper.
+                
+                Returns
+                -------
+                object
+                    Value produced by the helper.
+                
+                Notes
+                -----
+                This function is local to the simulation method that defines it.
+                """
                 self.cur_itr = i_local
                 sol_red_ = self.rom_solver(cls=self, param=param)
                 sol_rom = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
@@ -1124,6 +2197,30 @@ class rom_simulation(_ThreadedSweepMixin):
             raise ValueError("self.test_ref must not be None when full_order=True and new_params is provided.")
 
         def worker(param, i_local, i_global):
+            """Run one worker task for the surrounding simulation loop.
+            
+            TL;DR
+            -----
+            Run one worker task for the surrounding simulation loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local : object
+                Value supplied as `i_local` for this helper.
+            i_global : object
+                Value supplied as `i_global` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the simulation method that defines it.
+            """
             self.cur_itr = i_local
             sol_red_ = self.rom_solver(cls=self, param=param)
 
@@ -1173,6 +2270,44 @@ class rom_simulation(_ThreadedSweepMixin):
         fail_fast: bool = True,
         serial_first: bool = False,
     ):
+        """Run the ECSW hyper-reduced simulation workflow.
+        
+        TL;DR
+        -----
+        Run the ECSW hyper-reduced simulation workflow.
+        
+        Parameters
+        ----------
+        z : object
+            Value supplied as `z` for this helper.
+        full_order : object
+            Value supplied as `full_order` for this helper.
+        new_params : object
+            Value supplied as `new_params` for this helper.
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        serial_first : object
+            Value supplied as `serial_first` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self.hyper_speed_up      = []
         self.hyper_rom_error     = []
         self.hyper_rom_solutions = []
@@ -1187,6 +2322,30 @@ class rom_simulation(_ThreadedSweepMixin):
             global_idx = self._test_global_idx[:n]
 
             def worker(param, i_local, i_global):
+                """Run one worker task for the surrounding simulation loop.
+                
+                TL;DR
+                -----
+                Run one worker task for the surrounding simulation loop.
+                
+                Parameters
+                ----------
+                param : object
+                    Value supplied as `param` for this helper.
+                i_local : object
+                    Value supplied as `i_local` for this helper.
+                i_global : object
+                    Value supplied as `i_global` for this helper.
+                
+                Returns
+                -------
+                object
+                    Value produced by the helper.
+                
+                Notes
+                -----
+                This function is local to the simulation method that defines it.
+                """
                 self.cur_itr = i_local
                 sol_red_ = self.hyper_rom_solver_ecsw(cls=self, param=param)
                 sol_hyp = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
@@ -1239,6 +2398,30 @@ class rom_simulation(_ThreadedSweepMixin):
             raise ValueError("self.test_ref must not be None when full_order=True and new_params is provided.")
 
         def worker(param, i_local, i_global):
+            """Run one worker task for the surrounding simulation loop.
+            
+            TL;DR
+            -----
+            Run one worker task for the surrounding simulation loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local : object
+                Value supplied as `i_local` for this helper.
+            i_global : object
+                Value supplied as `i_global` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the simulation method that defines it.
+            """
             self.cur_itr = i_local
             sol_red_ = self.hyper_rom_solver_ecsw(cls=self, param=param)
 
@@ -1288,6 +2471,44 @@ class rom_simulation(_ThreadedSweepMixin):
         fail_fast: bool = True,
         serial_first: bool = False,
     ):
+        """Run the ECM hyper-reduced simulation workflow.
+        
+        TL;DR
+        -----
+        Run the ECM hyper-reduced simulation workflow.
+        
+        Parameters
+        ----------
+        z : object
+            Value supplied as `z` for this helper.
+        full_order : object
+            Value supplied as `full_order` for this helper.
+        new_params : object
+            Value supplied as `new_params` for this helper.
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        serial_first : object
+            Value supplied as `serial_first` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self.hyper_speed_up      = []
         self.hyper_rom_error     = []
         self.hyper_rom_solutions = []
@@ -1302,6 +2523,30 @@ class rom_simulation(_ThreadedSweepMixin):
             global_idx = self._test_global_idx[:n]
 
             def worker(param, i_local, i_global):
+                """Run one worker task for the surrounding simulation loop.
+                
+                TL;DR
+                -----
+                Run one worker task for the surrounding simulation loop.
+                
+                Parameters
+                ----------
+                param : object
+                    Value supplied as `param` for this helper.
+                i_local : object
+                    Value supplied as `i_local` for this helper.
+                i_global : object
+                    Value supplied as `i_global` for this helper.
+                
+                Returns
+                -------
+                object
+                    Value produced by the helper.
+                
+                Notes
+                -----
+                This function is local to the simulation method that defines it.
+                """
                 self.cur_itr = i_local
                 sol_red_ = self.hyper_rom_solver_ecm(cls=self, param=param)
                 sol_hyp = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
@@ -1354,6 +2599,30 @@ class rom_simulation(_ThreadedSweepMixin):
             raise ValueError("self.test_ref must not be None when full_order=True and new_params is provided.")
 
         def worker(param, i_local, i_global):
+            """Run one worker task for the surrounding simulation loop.
+            
+            TL;DR
+            -----
+            Run one worker task for the surrounding simulation loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local : object
+                Value supplied as `i_local` for this helper.
+            i_global : object
+                Value supplied as `i_global` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the simulation method that defines it.
+            """
             self.cur_itr = i_local
             sol_red_ = self.hyper_rom_solver_ecm(cls=self, param=param)
 
@@ -1405,6 +2674,48 @@ class rom_simulation(_ThreadedSweepMixin):
         fail_fast: bool = True,
         serial_first: bool = False,
     ):
+        """Run the DEIM hyper-reduced simulation workflow.
+        
+        TL;DR
+        -----
+        Run the DEIM hyper-reduced simulation workflow.
+        
+        Parameters
+        ----------
+        z : object
+            Value supplied as `z` for this helper.
+        deim_mat : object
+            Value supplied as `deim_mat` for this helper.
+        sampled_rows : object
+            Value supplied as `sampled_rows` for this helper.
+        full_order : object
+            Value supplied as `full_order` for this helper.
+        new_params : object
+            Value supplied as `new_params` for this helper.
+        parallel : object
+            Value supplied as `parallel` for this helper.
+        max_workers : object
+            Value supplied as `max_workers` for this helper.
+        verbose : object
+            Value supplied as `verbose` for this helper.
+        max_retries : object
+            Value supplied as `max_retries` for this helper.
+        retry_delay : object
+            Value supplied as `retry_delay` for this helper.
+        fail_fast : object
+            Value supplied as `fail_fast` for this helper.
+        serial_first : object
+            Value supplied as `serial_first` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self.hyper_speed_up      = []
         self.hyper_rom_error     = []
         self.hyper_rom_solutions = []
@@ -1421,6 +2732,30 @@ class rom_simulation(_ThreadedSweepMixin):
             global_idx = self._test_global_idx[:n]
 
             def worker(param, i_local, i_global):
+                """Run one worker task for the surrounding simulation loop.
+                
+                TL;DR
+                -----
+                Run one worker task for the surrounding simulation loop.
+                
+                Parameters
+                ----------
+                param : object
+                    Value supplied as `param` for this helper.
+                i_local : object
+                    Value supplied as `i_local` for this helper.
+                i_global : object
+                    Value supplied as `i_global` for this helper.
+                
+                Returns
+                -------
+                object
+                    Value produced by the helper.
+                
+                Notes
+                -----
+                This function is local to the simulation method that defines it.
+                """
                 self.cur_itr = i_local
                 sol_red_ = self.hyper_rom_solver_deim(cls=self, param=param)
                 sol_hyp = reconstruct_solution(sol_red_, self.V_sel, self._ref_for(i_local, i_global))
@@ -1473,6 +2808,30 @@ class rom_simulation(_ThreadedSweepMixin):
             raise ValueError("self.test_ref must not be None when full_order=True and new_params is provided.")
 
         def worker(param, i_local, i_global):
+            """Run one worker task for the surrounding simulation loop.
+            
+            TL;DR
+            -----
+            Run one worker task for the surrounding simulation loop.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            i_local : object
+                Value supplied as `i_local` for this helper.
+            i_global : object
+                Value supplied as `i_global` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This function is local to the simulation method that defines it.
+            """
             self.cur_itr = i_local
             sol_red_ = self.hyper_rom_solver_deim(cls=self, param=param)
 

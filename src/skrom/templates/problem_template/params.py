@@ -1,18 +1,34 @@
+"""Template parameter sampling definition.
+
+TL;DR
+-----
+This module shows where a user should generate training and testing parameter samples.
+
+Notes
+-----
+The starter function uses Sobol sampling and returns matching property values.
+"""
+
 import numpy as np
 from skrom.rom.rom_utils import generate_sobol  # Sobol sampler for low-discrepancy parameter sampling
 
 def parameters(N_snap):
-    """
+    """Template for generating training/testing parameter samples.
+    
+    TL;DR
+    -----
     Template for generating training/testing parameter samples.
-
+    
+    Notes
+    -----
     Uses generate_sobol from skrom.rom.rom_utils to sample uniformly
     over each interval in param_ranges.
-
+    
     Parameters
     ----------
     N_snap : int
         Number of samples per set.
-
+    
     Returns
     -------
     params : ndarray, shape (2*N_snap, D)
@@ -24,7 +40,7 @@ def parameters(N_snap):
     test_mask : ndarray of bool
         True for the remaining entries.
     """
-    # TODO: define your parameter intervals, e.g.
+    # TODO: define parameter intervals, e.g.
     # param_ranges = [(min1, max1), ..., (minD, maxD)]
 
     # TODO: sample training and testing points

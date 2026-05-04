@@ -1,17 +1,12 @@
-"""
-ECM-based hyperreduction for finite element linear forms.
+"""ECM hyper-reduction for linear forms.
 
-This module follows the same clustering strategy used by the ECSW linear-form
-implementation already in the repository. The only change is that the weights
-are stored per element and per Gauss point, and the assembly is performed from
-per-Gauss local vectors.
+TL;DR
+-----
+This module assembles reduced load vectors using element and Gauss-point ECM weights.
 
-Assumption
-----------
-The stored ECM weights are treated as multiplicative factors applied to
-scikit-fem's native per-Gauss contributions ``form(...) * dx``. If an external
-ECM code returns *absolute* cubature weights, convert them first using the
-helper in ``skrom.rom.ecm.helpers``.
+Notes
+-----
+It applies weighted quadrature contributions and projects local vectors onto the reduced basis.
 """
 
 from __future__ import annotations
@@ -31,7 +26,12 @@ from .helpers import dense_ecm_weights, active_ecm_elements, with_elements
 
 
 class LinearFormHYPERROM_ecm(LinearForm):
-    """Hyperreduced linear form assembled from ECM-selected Gauss points."""
+    """Hyperreduced linear form assembled from ECM-selected Gauss points.
+    
+    TL;DR
+    -----
+    Hyperreduced linear form assembled from ECM-selected Gauss points.
+    """
 
     def __init__(
         self,
@@ -44,6 +44,40 @@ class LinearFormHYPERROM_ecm(LinearForm):
         nthreads: int = 0,
         dtype: DTypeLike = np.float64,
     ):
+        """Initialize the LinearFormHYPERROM ECM instance.
+        
+        TL;DR
+        -----
+        Initialize the LinearFormHYPERROM ECM instance.
+        
+        Parameters
+        ----------
+        form : object
+            Value supplied as `form` for this helper.
+        gauss_weight : object
+            Value supplied as `gauss_weight` for this helper.
+        ubasis : object
+            Value supplied as `ubasis` for this helper.
+        lob : object
+            Value supplied as `lob` for this helper.
+        free_dofs : object
+            Value supplied as `free_dofs` for this helper.
+        mean : object
+            Value supplied as `mean` for this helper.
+        nthreads : object
+            Value supplied as `nthreads` for this helper.
+        dtype : object
+            Value supplied as `dtype` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         super().__init__(form)
 
         self.r_basis = lob
@@ -96,7 +130,12 @@ class LinearFormHYPERROM_ecm(LinearForm):
             self.w_cluster.append(self.gauss_weight_rom[idx])
 
     def _get_mapping(self, basis: Basis) -> ndarray:
-        """Map global DOFs to indices used by the stored reduced basis."""
+        """Map global DOFs to indices used by the stored reduced basis.
+        
+        TL;DR
+        -----
+        Map global DOFs to indices used by the stored reduced basis.
+        """
         n_full = basis.N
         if self.free_dofs is None:
             return np.arange(n_full, dtype=int)
@@ -106,7 +145,12 @@ class LinearFormHYPERROM_ecm(LinearForm):
         return mapping
 
     def assemble_weighted_ecm(self, **kwargs) -> ndarray:
-        """Assemble the reduced linear form using ECM Gauss-point weights."""
+        """Assemble the reduced linear form using ECM Gauss-point weights.
+        
+        TL;DR
+        -----
+        Assemble the reduced linear form using ECM Gauss-point weights.
+        """
         element_vectors_q = self.extract_element_vectors_qp_rom(
             self.ubasis_rom,
             elem_indices=self.nonzero_elements,
@@ -132,7 +176,12 @@ class LinearFormHYPERROM_ecm(LinearForm):
         return f_reduced
 
     def _kernel_qp(self, v, w, dx) -> ndarray:
-        """Return per-element, per-Gauss local vector contributions."""
+        """Return per-element, per-Gauss local vector contributions.
+        
+        TL;DR
+        -----
+        Return per-element, per-Gauss local vector contributions.
+        """
         val = np.asarray(self.form(*v, w) * dx, dtype=self.dtype)
         if val.ndim != 2:
             raise ValueError(
@@ -149,6 +198,34 @@ class LinearFormHYPERROM_ecm(LinearForm):
         )
 
     def _threaded_kernel_qp(self, data, ix, basis_list, wdict, dx):
+        """Assemble quadrature-point contributions inside a worker thread.
+        
+        TL;DR
+        -----
+        Assemble quadrature-point contributions inside a worker thread.
+        
+        Parameters
+        ----------
+        data : object
+            Value supplied as `data` for this helper.
+        ix : object
+            Value supplied as `ix` for this helper.
+        basis_list : object
+            Value supplied as `basis_list` for this helper.
+        wdict : object
+            Value supplied as `wdict` for this helper.
+        dx : object
+            Value supplied as `dx` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         for i in ix:
             data[i] = self._kernel_qp(basis_list[i], wdict, dx)
 
@@ -158,9 +235,12 @@ class LinearFormHYPERROM_ecm(LinearForm):
         elem_indices: Optional[np.ndarray] = None,
         **kwargs,
     ) -> ndarray:
-        """
+        """Extract per-Gauss local element vectors.
+        
+        TL;DR
+        -----
         Extract per-Gauss local element vectors.
-
+        
         Returns
         -------
         element_vectors_q : ndarray, shape (n_elem, n_loc, n_q)

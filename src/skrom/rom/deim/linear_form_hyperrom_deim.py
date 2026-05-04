@@ -1,19 +1,12 @@
-"""
-DEIM-based hyperreduction for finite element linear forms.
+"""DEIM hyper-reduction for linear forms.
 
-This module implements hyperreduction of linear forms using the Discrete 
-Empirical Interpolation Method (DEIM) combined with element sampling for 
-efficient load vector assembly. It provides dramatic computational speedups by:
-- Assembling only a subset of finite elements based on DEIM selection
-- Using efficient vector assembly techniques for sparse operations
-- Reconstructing full load vectors via DEIM interpolation matrices
-- Supporting parallel element vector extraction when available
+TL;DR
+-----
+This module assembles reduced load vectors by evaluating only DEIM-selected elements.
 
-**TL;DR**: Enables speedup in linear form assembly for ROMs by 
-evaluating only essential elements and reconstructing the full load vector through
-intelligent interpolation.
-
-Author: Suparno Bhattacharyya
+Notes
+-----
+It extracts selected element vectors and reconstructs the reduced contribution through DEIM interpolation data.
 """
 
 from typing import Optional
@@ -28,41 +21,42 @@ from numpy.typing import DTypeLike
 
 
 class LinearFormHYPERROM_deim(LinearForm):
-    """
-    DEIM-based hyperreduced linear form for efficient ROM load vector assembly.
-
-    **TL;DR**: Dramatically accelerates linear form assembly by ~1000x through 
-    strategic element sampling and DEIM interpolation, essential for real-time 
-    ROM applications with parameter-dependent forcing terms.
-
+    """DEIM-based hyperreduced linear form for efficient ROM load vector assembly.
+    
+    TL;DR
+    -----
+    Dramatically accelerates linear form assembly by ~1000x through strategic element sampling and DEIM interpolation, essential for real-time ROM applications with parameter-dependent forcing terms.
+    
+    Notes
+    -----
     This class implements a hyperreduction strategy that combines element 
     sampling with the Discrete Empirical Interpolation Method (DEIM) to achieve 
     massive computational savings in linear form assembly. The approach works by:
-
+    
     1. **Element Selection**: Uses DEIM-selected degrees of freedom to identify 
        which finite elements must be assembled for load vector construction, 
        dramatically reducing the active element count.
-
+    
     2. **Sparse Assembly**: Assembles only the selected elements using efficient 
        vector assembly techniques, avoiding computation over the entire domain.
-
+    
     3. **DEIM Reconstruction**: Reconstructs the full reduced-order load vector 
        using the DEIM interpolation matrix, enabling accurate approximation from 
        limited assembly data.
-
+    
     4. **Basis Projection**: Projects the sampled full-order load vector onto the 
        reduced test basis to produce the final reduced-order linear form.
-
+    
     This hyperreduction is particularly effective for problems where:
     - Load distributions are spatially localized or have low-rank structure
     - Real-time simulation speed is critical for control applications
     - Parameter-dependent forcing terms exhibit smooth variation
     - Computational resources are severely constrained
-
+    
     The method transforms assembly complexity from O(n_elements) to O(n_selected)
     where n_selected << n_elements, enabling real-time ROM evaluation with 
     parameter-dependent loads.
-
+    
     Parameters
     ----------
     form : callable
@@ -94,7 +88,7 @@ class LinearFormHYPERROM_deim(LinearForm):
         serial execution, positive values enable parallel assembly.
     dtype : numpy.dtype, default=np.float64
         Numerical precision for all computations and storage.
-
+    
     Attributes
     ----------
     r_basis : ndarray of shape (n_free, r)
@@ -127,9 +121,12 @@ class LinearFormHYPERROM_deim(LinearForm):
                  free_dofs: Optional[np.ndarray] = None,
                  mean: Optional[np.ndarray] = None,
                  nthreads=0, dtype=np.float64):
-        """
+        """Initialize hyperreduced linear form with DEIM parameters.
+        
+        TL;DR
+        -----
         Initialize hyperreduced linear form with DEIM parameters.
-
+        
         Parameters
         ----------
         form : callable
@@ -176,39 +173,41 @@ class LinearFormHYPERROM_deim(LinearForm):
         self.rows = self.edofs.ravel()                   # length = n_elems * n_loc
 
     def assemble_deim(self, **kwargs):
-        """
-        Assemble the hyperreduced load vector using DEIM reconstruction.
-
-        **TL;DR**: Main assembly method that combines sparse element assembly 
-        with DEIM interpolation to produce the reduced-order load vector.
-
+        """Assemble the hyperreduced load vector using DEIM reconstruction.
+        
+        TL;DR
+        -----
+        Main assembly method that combines sparse element assembly with DEIM interpolation to produce the reduced-order load vector.
+        
+        Notes
+        -----
         This method orchestrates the complete hyperreduction assembly process:
-
+        
         1. **Parameter Setup**: Combines default finite element parameters with 
            user-provided kwargs for element-level load evaluation.
-
+        
         2. **Sparse Assembly**: Calls `deim_elem_assembly()` to build the sparse 
            full-order load vector using only selected elements, dramatically 
            reducing computational cost.
-
+        
         3. **DEIM Sampling**: Extracts values at DEIM-selected rows from the 
            sparse vector, providing the minimal information needed for reconstruction.
-
+        
         4. **Vector Reconstruction**: Uses the DEIM interpolation matrix to 
            reconstruct the full reduced-order load vector from the sampled values.
-
+        
         The mathematical operation performed is:
         F_reduced = deim_mat @ F_sampled[sampled_rows]
-
+        
         where F_sampled is the sparse load vector assembled over selected elements only.
-
+        
         Parameters
         ----------
         **kwargs : dict
             Keyword arguments passed through to `deim_elem_assembly` for 
             element-level assembly control, such as material parameters or 
             time-dependent loading conditions.
-
+        
         Returns
         -------
         F_reduced : ndarray of shape (r,)
@@ -230,38 +229,39 @@ class LinearFormHYPERROM_deim(LinearForm):
         return Reduced_vector
     
     def deim_elem_assembly(self, **kwargs):
-        """
-        Assemble sparse load vector over hyperreduced element set.
-
-        **TL;DR**: Performs efficient sparse assembly by extracting element 
-        load vectors only from selected elements and building the global sparse 
-        load vector using optimized scatter-add operations.
-
+        """Assemble sparse load vector over hyperreduced element set.
+        
+        TL;DR
+        -----
+        Performs efficient sparse assembly by extracting element load vectors only from selected elements and building the global sparse load vector using optimized scatter-add operations.
+        
+        Notes
+        -----
         This method handles the computationally intensive element-level assembly 
         phase of hyperreduction for load vectors:
-
+        
         1. **Element Vector Extraction**: Calls `extract_element_vector_rom()` 
            to compute local load contributions for selected elements only, 
            avoiding expensive integration over the entire domain.
-
+        
         2. **Data Preparation**: Flattens the element load vectors into a 
            1D array matching the connectivity pattern for efficient assembly.
-
+        
         3. **Scatter-Add Assembly**: Uses NumPy's `add.at` function to 
            efficiently accumulate element contributions at their global DOF 
            locations, handling overlapping contributions correctly.
-
+        
         The assembly process preserves the mathematical structure of the full-order 
         load vector while dramatically reducing computational cost by focusing only 
         on elements containing DEIM-selected degrees of freedom.
-
+        
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed to `extract_element_vector_rom`
             for controlling element-level assembly behavior, such as load 
             magnitude parameters or spatial distribution functions.
-
+        
         Returns
         -------
         f : ndarray of shape (n_dofs,)
@@ -279,28 +279,29 @@ class LinearFormHYPERROM_deim(LinearForm):
         return f
 
     def extract_element_vector_rom(self, basis: Basis, elem_indices = None, **kwargs):
-        """
-        Extract element load vectors for hyperreduced mesh assembly.
-
-        **TL;DR**: Computes local element load vectors for the reduced 
-        element set using either serial or parallel execution, providing the 
-        fundamental building blocks for sparse global load vector assembly.
-
+        """Extract element load vectors for hyperreduced mesh assembly.
+        
+        TL;DR
+        -----
+        Computes local element load vectors for the reduced element set using either serial or parallel execution, providing the fundamental building blocks for sparse global load vector assembly.
+        
+        Notes
+        -----
         This method performs the core finite element integration to compute 
         element-level contributions to the global linear form. The integration 
         is performed only over elements selected by the hyperreduction strategy, 
         dramatically reducing computational cost.
-
+        
         The method supports both serial and parallel execution modes:
         - **Serial Mode** (nthreads=0): Sequential element-by-element computation
         - **Parallel Mode** (nthreads>0): Multi-threaded parallel element processing
-
+        
         For each element, the method evaluates the linear form:
         F_e[i] = ∫_Ω_e φ_i(x) * form(x) dx
-
+        
         where φ_i are test basis functions and the integration is performed using 
         the quadrature rules embedded in the finite element basis.
-
+        
         Parameters
         ----------
         basis : Basis
@@ -313,13 +314,13 @@ class LinearFormHYPERROM_deim(LinearForm):
             Additional keyword arguments passed to the linear form evaluation,
             such as load magnitude parameters, time-dependent coefficients, or 
             other problem-specific data.
-
+        
         Returns
         -------
         element_vectors : ndarray of shape (n_elements, n_local_dofs)
             Array of local element load vectors. Each element_vectors[e] 
             contains the n_local_dofs-length load vector for element e.
-
+        
         Raises
         ------
         ValueError
@@ -353,6 +354,34 @@ class LinearFormHYPERROM_deim(LinearForm):
             indices = np.arange(basis.Nbfun)
             # Define a helper for threaded computation.
             def threaded_kernel_vector(data, idx_chunk, basis_list, wdict, dx):
+                """Assemble vector contributions inside a worker thread.
+                
+                TL;DR
+                -----
+                Assemble vector contributions inside a worker thread.
+                
+                Parameters
+                ----------
+                data : object
+                    Value supplied as `data` for this helper.
+                idx_chunk : object
+                    Value supplied as `idx_chunk` for this helper.
+                basis_list : object
+                    Value supplied as `basis_list` for this helper.
+                wdict : object
+                    Value supplied as `wdict` for this helper.
+                dx : object
+                    Value supplied as `dx` for this helper.
+                
+                Returns
+                -------
+                None
+                    This function updates state or performs work in place.
+                
+                Notes
+                -----
+                This helper is part of the surrounding workflow and keeps behavior local to the caller.
+                """
                 for i in idx_chunk:
                     data[i, :] = self._kernel(basis_list[i], wdict, dx)
             idx_chunks = np.array_split(indices, self.nthreads)

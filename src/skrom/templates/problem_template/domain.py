@@ -1,13 +1,27 @@
-def domain_(**kwargs):
-    """
-    Template for setting up the computational domain and boundary conditions.
+"""Template domain definition.
 
+TL;DR
+-----
+This module shows where a user should create the mesh, basis, and boundary degree-of-freedom sets.
+
+Notes
+-----
+The returned dictionary is expected by the problem workflow classes.
+"""
+
+def domain_(**kwargs):
+    """Template for setting up the computational domain and boundary conditions.
+    
+    TL;DR
+    -----
+    Template for setting up the computational domain and boundary conditions.
+    
     Parameters
     ----------
     kwargs : dict
         Any problem-specific parameters needed for mesh generation,
         basis construction, and boundary identification.
-
+    
     Returns
     -------
     dict

@@ -1,20 +1,14 @@
+"""Reduced linear form assembly.
+
+TL;DR
+-----
+This module projects full-order element load or residual contributions onto a reduced basis.
+
+Notes
+-----
+It includes chunked assembly, hyper-reduction preparation, and extraction helpers for element-level vectors.
 """
-Implements reduced-order linear form assembly for full-order to reduced-order transformations.
 
-This module provides:
-  - `LinearFormROM`: a subclass of `skfem.assembly.form.linear_form.LinearForm`
-    that projects full-order element load vectors onto reduced bases,
-    groups elements by Dirichlet-free and mixed-Dirichlet sets for memory-efficient handling,
-    and assembles the global reduced load vector with optional chunked computation.
-
-The `rom` folder contains core tools for reduced-order modeling (ROM), including:
-  - Classes for projecting and assembling reduced-order bilinear and linear forms
-  - Utilities for handling Dirichlet boundary conditions in reduced spaces
-  - Chunked and clustered assembly routines to manage large-scale stiffness/load data
-  - Mapping utilities between full-order and reduced-order degrees of freedom
-
-  [Author: Suparno Bhattacharyya]
-"""
 import gc
 from typing import Optional
 from threading import Thread
@@ -28,13 +22,18 @@ from skfem.assembly.basis import AbstractBasis
 
 class LinearFormROM(LinearForm):
 
-    """
-    LinearFormROM
-
+    """LinearFormROM
+    
+    TL;DR
+    -----
+    LinearFormROM.
+    
+    Notes
+    -----
     Linear form that projects element load vectors onto reduced bases
     and assembles the global reduced load vector, handling Dirichlet boundary
     conditions via mappings from full to free DOFs.
-
+    
     Attributes
     ----------
     r_basis : ndarray, shape (N_free, r) or (N, r)
@@ -73,9 +72,12 @@ class LinearFormROM(LinearForm):
 
     def __init__(self, form, ubasis: Basis, lob, free_dofs: Optional[ndarray] = None,
                  mean: Optional[ndarray] = None, nthreads=0, dtype=np.float64):
-        """
+        """Initialize the reduced-order linear form.
+        
+        TL;DR
+        -----
         Initialize the reduced-order linear form.
-
+        
         Parameters
         ----------
         form : callable
@@ -139,14 +141,17 @@ class LinearFormROM(LinearForm):
 
 
     def _get_mapping(self, basis: Basis) -> ndarray:
-        """
+        """Create mapping from full DOFs to reduced DOF indices.
+        
+        TL;DR
+        -----
         Create mapping from full DOFs to reduced DOF indices.
-
+        
         Parameters
         ----------
         basis : Basis
             Full-order finite element basis.
-
+        
         Returns
         -------
         mapping : ndarray, shape (N_full,)
@@ -163,17 +168,22 @@ class LinearFormROM(LinearForm):
         
 
     def assemble(self, **kwargs) -> ndarray:
-        """
+        """Assemble the global reduced load vector.
+        
+        TL;DR
+        -----
         Assemble the global reduced load vector.
-
+        
+        Notes
+        -----
         Projects element load vectors onto reduced bases and sums contributions
         over free DOFs only.
-
+        
         Parameters
         ----------
         **kwargs
             Additional parameters passed to the form during assembly.
-
+        
         Returns
         -------
         f_reduced : ndarray, shape (r,)
@@ -191,6 +201,26 @@ class LinearFormROM(LinearForm):
         def compute_reduced_vector_in_chunks(element_vectors):
 
 
+            """Compute a reduced vector by processing element data in chunks.
+            
+            TL;DR
+            -----
+            Compute a reduced vector by processing element data in chunks.
+            
+            Parameters
+            ----------
+            element_vectors : object
+                Value supplied as `element_vectors` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             mask = self.mask        # shape (Nbfun, n_elements)
 
             f_reduced_A = np.zeros((r,), dtype=self.dtype)
@@ -217,6 +247,26 @@ class LinearFormROM(LinearForm):
 
             def compute_f_red(e):
 
+                """Compute the reduced vector for the linear form.
+                
+                TL;DR
+                -----
+                Compute the reduced vector for the linear form.
+                
+                Parameters
+                ----------
+                e : object
+                    Value supplied as `e` for this helper.
+                
+                Returns
+                -------
+                object
+                    Value produced by the helper.
+                
+                Notes
+                -----
+                This helper is part of the surrounding workflow and keeps behavior local to the caller.
+                """
                 local_mask = mask[:, e]
 
                 idx = self.mapping[self.element_dofs[:, e]][local_mask]
@@ -251,14 +301,17 @@ class LinearFormROM(LinearForm):
 
 
     def hyperreduction(self, **kwargs) -> ndarray:
-        """
+        """Perform hyperreduction to assemble per-element reduced load contributions.
+        
+        TL;DR
+        -----
         Perform hyperreduction to assemble per-element reduced load contributions.
-
+        
         Parameters
         ----------
         **kwargs
             Additional parameters passed to the form during hyperreduction.
-
+        
         Returns
         -------
         f_reduced : ndarray, shape (n_contribs, r)
@@ -321,6 +374,26 @@ class LinearFormROM(LinearForm):
 
         def compute_f_red(e):
 
+            """Compute the reduced vector for the linear form.
+            
+            TL;DR
+            -----
+            Compute the reduced vector for the linear form.
+            
+            Parameters
+            ----------
+            e : object
+                Value supplied as `e` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             local_mask = self.mask[:, e]
             idx = self.mapping[self.element_dofs[:, e]][local_mask]
 
@@ -354,18 +427,23 @@ class LinearFormROM(LinearForm):
     
 
     def extract_element_vector(self, basis: AbstractBasis, **kwargs):
-        """
+        """Extract local element load vectors for a linear form.
+        
+        TL;DR
+        -----
         Extract local element load vectors for a linear form.
-
+        
+        Notes
+        -----
         Computes per-element load contributions for each local basis function.
-
+        
         Parameters
         ----------
         basis : AbstractBasis
             Finite element basis associated with the test function.
         **kwargs
             Additional keyword arguments passed to the form.
-
+        
         Returns
         -------
         element_vectors : ndarray, shape (n_elements, Nbfun)
@@ -389,6 +467,34 @@ class LinearFormROM(LinearForm):
         else:
             # Threaded computation for the linear form.
             def threaded_kernel_vector(data, indices, basis_list, wdict, dx):
+                """Assemble vector contributions inside a worker thread.
+                
+                TL;DR
+                -----
+                Assemble vector contributions inside a worker thread.
+                
+                Parameters
+                ----------
+                data : object
+                    Value supplied as `data` for this helper.
+                indices : object
+                    Value supplied as `indices` for this helper.
+                basis_list : object
+                    Value supplied as `basis_list` for this helper.
+                wdict : object
+                    Value supplied as `wdict` for this helper.
+                dx : object
+                    Value supplied as `dx` for this helper.
+                
+                Returns
+                -------
+                None
+                    This function updates state or performs work in place.
+                
+                Notes
+                -----
+                This helper is part of the surrounding workflow and keeps behavior local to the caller.
+                """
                 for i in indices:
                     data[i, :] = self._kernel(basis_list[i], wdict, dx)
 
@@ -413,9 +519,14 @@ class LinearFormROM(LinearForm):
  
 
     def _kernel_qp(self, v, w, dx) -> ndarray:
-        """
+        """Return per-element, per-Gauss local vector contributions.
+        
+        TL;DR
+        -----
         Return per-element, per-Gauss local vector contributions.
-
+        
+        Notes
+        -----
         The returned values include multiplication by ``dx`` but are not yet
         summed over Gauss points.
         """
@@ -434,13 +545,44 @@ class LinearFormROM(LinearForm):
         )
 
     def _threaded_kernel_qp(self, data, indices, basis_list, wdict, dx):
+        """Assemble quadrature-point contributions inside a worker thread.
+        
+        TL;DR
+        -----
+        Assemble quadrature-point contributions inside a worker thread.
+        
+        Parameters
+        ----------
+        data : object
+            Value supplied as `data` for this helper.
+        indices : object
+            Value supplied as `indices` for this helper.
+        basis_list : object
+            Value supplied as `basis_list` for this helper.
+        wdict : object
+            Value supplied as `wdict` for this helper.
+        dx : object
+            Value supplied as `dx` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         for i in indices:
             data[i, :, :] = self._kernel_qp(basis_list[i], wdict, dx)
 
     def extract_element_vector_qp(self, basis: AbstractBasis, **kwargs):
-        """
+        """Extract local element load vectors resolved at Gauss points.
+        
+        TL;DR
+        -----
         Extract local element load vectors resolved at Gauss points.
-
+        
         Returns
         -------
         element_vectors_q : ndarray, shape (n_elements, n_local_dofs, n_q)
@@ -479,9 +621,12 @@ class LinearFormROM(LinearForm):
         return np.transpose(local_data, (1, 0, 2))
 
     def hyperreduction_ecm(self, **kwargs) -> ndarray:
-        """
+        """Assemble per-element, per-Gauss reduced residual contributions for ECM.
+        
+        TL;DR
+        -----
         Assemble per-element, per-Gauss reduced residual contributions for ECM.
-
+        
         Returns
         -------
         f_reduced_q : ndarray, shape (n_elements * n_q, r)

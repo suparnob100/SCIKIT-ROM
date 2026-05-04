@@ -1,19 +1,12 @@
-"""
-DEIM-based hyperreduction for finite element bilinear forms.
+"""DEIM hyper-reduction for bilinear forms.
 
-This module implements hyperreduction of bilinear forms using the Discrete 
-Empirical Interpolation Method (DEIM) combined with element sampling. It provides
-dramatic computational speedups by:
-- Assembling only a subset of finite elements based on DEIM selection
-- Using sparse matrix techniques for efficient memory usage
-- Reconstructing full operators via DEIM interpolation matrices
-- Supporting parallel element matrix extraction when available
+TL;DR
+-----
+This module assembles reduced stiffness operators by evaluating only DEIM-selected elements.
 
-**TL;DR**: Enables ~100-1000x speedup in bilinear form assembly for ROMs by 
-evaluating only essential elements and reconstructing the full operator through
-intelligent interpolation.
-
-Author: Suparno Bhattacharyya
+Notes
+-----
+It uses selected element matrices and interpolation data to approximate the full reduced bilinear contribution.
 """
 
 from typing import Optional
@@ -30,40 +23,41 @@ from scipy.sparse import lil_matrix
 
 
 class BilinearFormHYPERROM_deim(BilinearForm):
-    """
-    DEIM-based hyperreduced bilinear form for efficient ROM assembly.
-
-    **TL;DR**: Dramatically accelerates bilinear form assembly by ~1000x through 
-    strategic element sampling and DEIM interpolation, essential for real-time 
-    nonlinear ROM applications.
-
+    """DEIM-based hyperreduced bilinear form for efficient ROM assembly.
+    
+    TL;DR
+    -----
+    Dramatically accelerates bilinear form assembly by ~1000x through strategic element sampling and DEIM interpolation, essential for real-time nonlinear ROM applications.
+    
+    Notes
+    -----
     This class implements a hyperreduction strategy that combines element 
     sampling with the Discrete Empirical Interpolation Method (DEIM) to achieve 
     massive computational savings in bilinear form assembly. The approach works by:
-
+    
     1. **Element Selection**: Uses DEIM-selected degrees of freedom to identify 
        which finite elements must be assembled, dramatically reducing the active 
        element count from thousands to tens.
-
+    
     2. **Sparse Assembly**: Assembles only the selected elements using efficient 
        sparse matrix techniques, avoiding computation over the entire domain.
-
+    
     3. **DEIM Reconstruction**: Reconstructs the full reduced-order operator using 
        the DEIM interpolation matrix, enabling accurate approximation from 
        limited assembly data.
-
+    
     4. **Basis Projection**: Projects the sampled full-order matrix onto the 
        reduced basis to produce the final reduced-order bilinear form.
-
+    
     This hyperreduction is particularly effective for problems where:
     - Nonlinear effects are spatially localized
     - Real-time simulation speed is critical
     - The parameter-dependent operators have low-rank structure
     - Computational resources are severely constrained
-
+    
     The method transforms assembly complexity from O(n_elements) to O(n_selected)
     where n_selected << n_elements, enabling real-time nonlinear ROM evaluation.
-
+    
     Parameters
     ----------
     form : callable
@@ -100,7 +94,7 @@ class BilinearFormHYPERROM_deim(BilinearForm):
         serial execution, positive values enable parallel assembly.
     dtype : numpy.dtype, default=np.float64
         Numerical precision for all computations and storage.
-
+    
     Attributes
     ----------
     weight : ndarray of shape (n_elements,)
@@ -138,9 +132,12 @@ class BilinearFormHYPERROM_deim(BilinearForm):
                  mean: Optional[ndarray] = None,
                  nthreads: int = 0,
                  dtype: DTypeLike = np.float64):
-        """
+        """Initialize hyperreduced bilinear form with DEIM parameters.
+        
+        TL;DR
+        -----
         Initialize hyperreduced bilinear form with DEIM parameters.
-
+        
         Parameters
         ----------
         form : callable
@@ -198,38 +195,40 @@ class BilinearFormHYPERROM_deim(BilinearForm):
         self.col_flat  = self.cols.ravel()
 
     def assemble_deim(self, **kwargs):
-        """
-        Assemble the hyperreduced bilinear form using DEIM reconstruction.
-
-        **TL;DR**: Main assembly method that combines sparse element assembly 
-        with DEIM interpolation to produce the reduced-order operator matrix.
-
+        """Assemble the hyperreduced bilinear form using DEIM reconstruction.
+        
+        TL;DR
+        -----
+        Main assembly method that combines sparse element assembly with DEIM interpolation to produce the reduced-order operator matrix.
+        
+        Notes
+        -----
         This method orchestrates the complete hyperreduction assembly process:
-
+        
         1. **Sparse Assembly**: Calls `deim_elem_assembly()` to build the sparse 
            full-order matrix using only selected elements, dramatically reducing 
            computational cost.
-
+        
         2. **DEIM Sampling**: Extracts values at DEIM-selected rows from the 
            sparse matrix, providing the minimal information needed for reconstruction.
-
+        
         3. **Operator Reconstruction**: Uses the DEIM interpolation matrix to 
            reconstruct the full reduced-order operator from the sampled values.
-
+        
         4. **Basis Projection**: Projects the reconstructed operator onto the 
            reduced trial basis to produce the final r×r reduced-order matrix.
-
+        
         The mathematical operation performed is:
         A_reduced = deim_mat @ A_sampled[sampled_rows, :] @ rob
-
+        
         where A_sampled is the sparse matrix assembled over selected elements only.
-
+        
         Parameters
         ----------
         **kwargs : dict
             Keyword arguments passed through to `deim_elem_assembly` for 
             element-level assembly control.
-
+        
         Returns
         -------
         A_reduced : ndarray of shape (r, r)
@@ -243,41 +242,42 @@ class BilinearFormHYPERROM_deim(BilinearForm):
         return Reduced_matrix
     
     def deim_elem_assembly(self, **kwargs):
-        """
-        Assemble sparse matrix over hyperreduced element set.
-
-        **TL;DR**: Performs efficient sparse assembly by extracting element 
-        matrices only from selected elements and building the global sparse 
-        matrix using optimized COO format construction.
-
+        """Assemble sparse matrix over hyperreduced element set.
+        
+        TL;DR
+        -----
+        Performs efficient sparse assembly by extracting element matrices only from selected elements and building the global sparse matrix using optimized COO format construction.
+        
+        Notes
+        -----
         This method handles the computationally intensive element-level assembly 
         phase of hyperreduction:
-
+        
         1. **Element Matrix Extraction**: Calls `extract_element_matrices_rom()` 
            to compute local stiffness matrices for selected elements only, 
            avoiding expensive integration over the entire domain.
-
+        
         2. **Sparse Data Preparation**: Flattens the element matrices and 
            corresponding row/column indices into triplet format (I, J, V) 
            suitable for sparse matrix construction.
-
+        
         3. **Zero Filtering**: Optionally removes zero entries to minimize 
            memory usage and improve sparse matrix performance.
-
+        
         4. **COO Construction**: Builds the sparse matrix using coordinate (COO) 
            format and converts to compressed sparse row (CSR) for efficient 
            subsequent operations.
-
+        
         The assembly process preserves the mathematical structure of the full-order 
         operator while dramatically reducing computational cost by focusing only 
         on elements containing DEIM-selected degrees of freedom.
-
+        
         Parameters
         ----------
         **kwargs : dict
             Additional keyword arguments passed to `extract_element_matrices_rom`
             for controlling element-level assembly behavior.
-
+        
         Returns
         -------
         K : scipy.sparse.csr_matrix of shape (n_dofs, n_dofs)
@@ -313,28 +313,29 @@ class BilinearFormHYPERROM_deim(BilinearForm):
                                      vbasis: Optional[Basis] = None,
                                      elem_indices: Optional[ndarray] = None,
                                      **kwargs) -> ndarray:
-        """
-        Extract element matrices for hyperreduced mesh assembly.
-
-        **TL;DR**: Computes local element stiffness matrices for the reduced 
-        element set using either serial or parallel execution, providing the 
-        fundamental building blocks for sparse global assembly.
-
+        """Extract element matrices for hyperreduced mesh assembly.
+        
+        TL;DR
+        -----
+        Computes local element stiffness matrices for the reduced element set using either serial or parallel execution, providing the fundamental building blocks for sparse global assembly.
+        
+        Notes
+        -----
         This method performs the core finite element integration to compute 
         element-level contributions to the global bilinear form. The integration 
         is performed only over elements selected by the hyperreduction strategy, 
         dramatically reducing computational cost.
-
+        
         The method supports both serial and parallel execution modes:
         - **Serial Mode** (nthreads=0): Sequential element-by-element computation
         - **Parallel Mode** (nthreads>0): Multi-threaded parallel element processing
-
+        
         For each element, the method evaluates the bilinear form:
         K_e[i,j] = ∫_Ω_e φ_i(x) * form * φ_j(x) dx
-
+        
         where φ_i, φ_j are basis functions and the integration is performed using 
         the quadrature rules embedded in the finite element basis.
-
+        
         Parameters
         ----------
         ubasis : Basis
@@ -349,13 +350,13 @@ class BilinearFormHYPERROM_deim(BilinearForm):
         **kwargs : dict
             Additional keyword arguments passed to the bilinear form evaluation,
             such as material parameters or other problem-specific data.
-
+        
         Returns
         -------
         element_matrices : ndarray of shape (n_elements, n_local_dofs, n_local_dofs)
             Array of local element stiffness matrices. Each element_matrices[e] 
             contains the n_local_dofs × n_local_dofs stiffness matrix for element e.
-
+        
         Raises
         ------
         ValueError

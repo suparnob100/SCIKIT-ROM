@@ -1,17 +1,10 @@
-"""
-fem_utils.py
-------------
-Finite‐element utilities for full‐order model (FOM) workflows.
+"""Full-order model helper package.
 
-This module provides helpers for:
-  - Mesh‐ and basis‐related operations
-  - Assembly of stiffness/mass matrices and load vectors
-  - Application of boundary conditions and integration routines
+TL;DR
+-----
+This package groups finite element utilities used to build and solve full-order models.
 
-The `fom` folder contains everything needed to build and solve
-full‐order PDE models, including:
-  - Mesh management and basis function definitions
-  - System assembly routines (matrices, RHS)
-  - Solver interfaces and preconditioners
-  - Diagnostic and post‐processing tools
+Notes
+-----
+The package currently exposes helpers for mesh loading, basis handling, preconditioners, and nonlinear solvers.
 """

@@ -1,3 +1,14 @@
+"""Empirical Cubature Method solver.
+
+TL;DR
+-----
+This module selects a sparse set of cubature points and positive weights for hyper-reduced models.
+
+Notes
+-----
+It implements setup, candidate selection, weight updates, and convergence tracking for ECM training.
+"""
+
 ###
 # Source:
 # R. Bravo, localECM: A Local Empirical Cubature Method Implementation, GitHub, 2024. [Online]. Available: https://github.com/Rbravo555/localECM. [Accessed: Feb. 3, 2025].
@@ -14,9 +25,12 @@ except ImportError as e:
 
 
 class EmpiricalCubatureMethod():
-    """
-    This class selects a subset of elements and corresponding positive weights necessary for the construction of a hyper-reduced order model
+    """This class selects a subset of elements and corresponding positive weights necessary for the construction of a hyper-reduced order model
     Reference: Local-ECM: An empirical cubature hyper-reduction method adapted to local reduced order models." arXiv preprint arXiv:2310.15769 (2023)"
+    
+    TL;DR
+    -----
+    This class selects a subset of elements and corresponding positive weights necessary for the construction of a hyper-reduced order model.
     """
 
 
@@ -28,11 +42,14 @@ class EmpiricalCubatureMethod():
         Plotting = False,
         MaximumNumberUnsuccesfulIterations = 100
     ):
-        """
-        Constructor setting up the parameters for the Element Selection Strategy
+        """Constructor setting up the parameters for the Element Selection Strategy
             ECM_tolerance: approximation tolerance for the element selection algorithm
             Filter_tolerance: parameter limiting the number of candidate points (elements) to those above this tolerance
             Plotting: whether to plot the error evolution of the element selection algorithm
+        
+        TL;DR
+        -----
+        Constructor setting up the parameters for the Element Selection Strategy.
         """
         self.ECM_tolerance = ECM_tolerance
         self.Filter_tolerance = Filter_tolerance
@@ -48,9 +65,12 @@ class EmpiricalCubatureMethod():
         InitialCandidatesSet = None,
         use_L2_weighting = False
     ):
-        """
-        Method for setting up the element selection
+        """Method for setting up the element selection
         input:  ResidualsBasis: numpy array containing a basis to the residuals projected
+        
+        TL;DR
+        -----
+        Method for setting up the element selection.
         """
         self.W = Weights
         self.G = G
@@ -75,8 +95,11 @@ class EmpiricalCubatureMethod():
 
 
     def Initialize(self):
-        """
-        Method performing calculations required before launching the Calculate method
+        """Method performing calculations required before launching the Calculate method
+        
+        TL;DR
+        -----
+        Method performing calculations required before launching the Calculate method.
         """
         self.Gnorm = np.linalg.norm(self.G[:self.add_constrain_count,:], axis = 0)
         M = np.shape(self.G)[1]
@@ -108,13 +131,31 @@ class EmpiricalCubatureMethod():
 
 
     def Run(self):
-        """
-        Method launching the element selection algorithm to find a set of elements: self.z, and weights: self.w
+        """Method launching the element selection algorithm to find a set of elements: self.z, and weights: self.w
+        
+        TL;DR
+        -----
+        Method launching the element selection algorithm to find a set of elements: self.z, and weights: self.w.
         """
         self.Initialize()
         self.Calculate()
 
     def expand_candidates_with_complement(self):
+        """Expand ECM candidate indices with their complement when requested.
+        
+        TL;DR
+        -----
+        Expand ECM candidate indices with their complement when requested.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self.y = np.r_[self.y,self.y_complement]
         print('expanding set to include the complement...')
         ExpandedSetFlag = True
@@ -122,8 +163,11 @@ class EmpiricalCubatureMethod():
 
 
     def Calculate(self):
-        """
-        Method calculating the elements and weights, after the Initialize method was performed
+        """Method calculating the elements and weights, after the Initialize method was performed
+        
+        TL;DR
+        -----
+        Method calculating the elements and weights, after the Initialize method was performed.
         """
         MaximumLengthZ = 0
         ExpandedSetFlag = False
@@ -227,8 +271,11 @@ class EmpiricalCubatureMethod():
 
 
     def _UpdateWeightsInverse(self, A,Aast,a,xold):
-        """
-        Method for the cheap update of weights (self.w), whenever a negative weight is found
+        """Method for the cheap update of weights (self.w), whenever a negative weight is found
+        
+        TL;DR
+        -----
+        Method for the cheap update of weights (self.w), whenever a negative weight is found.
         """
         c = np.dot(A.T, a)
         d = np.dot(Aast, c).reshape(-1, 1)
@@ -246,8 +293,11 @@ class EmpiricalCubatureMethod():
 
 
     def _MultiUpdateInverseHermitian(self, invH, neg_indexes):
-        """
-        Method for the cheap update of weights (self.w), whenever a negative weight is found
+        """Method for the cheap update of weights (self.w), whenever a negative weight is found
+        
+        TL;DR
+        -----
+        Method for the cheap update of weights (self.w), whenever a negative weight is found.
         """
         neg_indexes = np.sort(neg_indexes)
         for i in range(np.size(neg_indexes)):
@@ -257,8 +307,11 @@ class EmpiricalCubatureMethod():
 
 
     def _UpdateInverseHermitian(self, invH, neg_index):
-        """
-        Method for the cheap update of weights (self.w), whenever a negative weight is found
+        """Method for the cheap update of weights (self.w), whenever a negative weight is found
+        
+        TL;DR
+        -----
+        Method for the cheap update of weights (self.w), whenever a negative weight is found.
         """
         if neg_index == np.shape(invH)[1]:
             aux = (invH[0:-1, -1] * invH[-1, 0:-1]) / invH(-1, -1)

@@ -1,18 +1,12 @@
-"""
-Implements bounded non-negative least squares (NNLS) for Empirical Cubature Subset Weighting (ECSW).
+"""Bounded nonnegative least-squares solver.
 
-This module provides:
-  - `NNLS_termination`: enumeration of L2 and L∞ convergence criteria for NNLS.
-  - `_verify`: internal helper to assert solver invariants.
-  - `NNLSSolver`: a sequential active-set NNLS solver with per-entry bounds, selectable norms,
-    stall-detection, and verbosity controls.
+TL;DR
+-----
+This module solves the NNLS systems used to compute ECSW cubature weights.
 
-The `ecsw` folder contains utilities for Empirical Cubature Subset Weighting, including:
-  - Algorithms to compute cubature weights using bounded NNLS.
-  - Selection and pruning of integration points via active-set methods.
-  - Support functions for convergence criteria and solver configuration.
-  
-  [Original C++ code: libROM team at LLNL, Python adaptation: Suparno Bhattacharyya]
+Notes
+-----
+It provides termination checks, input validation, verbosity controls, and an active-set solver with bounds.
 """
 
 import numpy as np
@@ -22,11 +16,16 @@ import enum
 
 # --- Enums and Constants ---
 class NNLS_termination(enum.Enum):
-    """
+    """Termination criteria for the NNLS solver.
+    
+    TL;DR
+    -----
     Termination criteria for the NNLS solver.
-
+    
+    Notes
+    -----
     Enumeration of the two supported norms used to decide convergence.
-
+    
     Attributes
     ----------
     L2 : int
@@ -40,9 +39,12 @@ class NNLS_termination(enum.Enum):
     LINF = 1
 
 def _verify(condition, message="Verification failed"):
-    """
+    """Assert that `condition` is True.
+    
+    TL;DR
+    -----
     Assert that `condition` is True.
-
+    
     Parameters
     ----------
     condition : bool
@@ -50,7 +52,7 @@ def _verify(condition, message="Verification failed"):
     message : str, optional
         Error message to raise if `condition` is False (default:
         "Verification failed").
-
+    
     Raises
     ------
     AssertionError
@@ -61,12 +63,17 @@ def _verify(condition, message="Verification failed"):
 
 # --- NNLSSolver Class (Sequential Version) ---
 class NNLSSolver:
-    """
+    """Sequential bounded NNLS (non-negative least squares) solver.
+    
+    TL;DR
+    -----
     Sequential bounded NNLS (non-negative least squares) solver.
-
+    
+    Notes
+    -----
     Implements an active-set method for finding x ≥ 0 that approximately satisfies
     A x ≈ b, with per-entry bounds on b and two convergence tests (L₂‐ and L∞‐norm).
-
+    
     Parameters
     ----------
     const_tol : float, optional
@@ -94,7 +101,7 @@ class NNLSSolver:
     criterion : {NNLS_termination.L2, NNLS_termination.LINF}, optional
         Which norm to use for stopping test: L2 uses ‖r‖₂ ≤ ‖gap‖₂, L∞ uses
         max_violation ≤ const_tol  (default: L∞).
-
+    
     Attributes
     ----------
     const_tol_ : float
@@ -134,6 +141,42 @@ class NNLSSolver:
                  n_outer=1000, n_inner=400,
                  criterion=NNLS_termination.LINF):
 
+        """Initialize the NNLSSolver instance.
+        
+        TL;DR
+        -----
+        Initialize the NNLSSolver instance.
+        
+        Parameters
+        ----------
+        const_tol : object
+            Value supplied as `const_tol` for this helper.
+        min_nnz : object
+            Value supplied as `min_nnz` for this helper.
+        max_nnz : object
+            Value supplied as `max_nnz` for this helper.
+        verbosity : object
+            Value supplied as `verbosity` for this helper.
+        res_change_termination_tol : object
+            Value supplied as `res_change_termination_tol` for this helper.
+        zero_tol : object
+            Value supplied as `zero_tol` for this helper.
+        n_outer : object
+            Value supplied as `n_outer` for this helper.
+        n_inner : object
+            Value supplied as `n_inner` for this helper.
+        criterion : object
+            Value supplied as `criterion` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         self.const_tol_ = float(const_tol)
         self.min_nnz_ = int(min_nnz)
         self.max_nnz_ = int(max_nnz)  # 0 means set later based on matrix size
@@ -150,9 +193,12 @@ class NNLSSolver:
             print("NNLSSolver init (Sequential Version)")
 
     def set_verbosity(self, verbosity_in):
-        """
+        """Set the verbosity level.
+        
+        TL;DR
+        -----
         Set the verbosity level.
-
+        
         Parameters
         ----------
         verbosity_in : int
@@ -161,9 +207,12 @@ class NNLSSolver:
         self.verbosity_ = int(verbosity_in)
 
     def solve(self, mat, rhs_lb, rhs_ub):
-        """
+        """Solve A x ≈ b with 0 ≤ x and b∈[rhs_lb, rhs_ub] by active‐set NNLS.
+        
+        TL;DR
+        -----
         Solve A x ≈ b with 0 ≤ x and b∈[rhs_lb, rhs_ub] by active‐set NNLS.
-
+        
         Parameters
         ----------
         mat : array_like, shape (m, n)
@@ -172,7 +221,7 @@ class NNLSSolver:
             Per‐entry lower bounds on b.
         rhs_ub : array_like, shape (m,)
             Per‐entry upper bounds on b.
-
+        
         Returns
         -------
         final_soln : ndarray, shape (n,)

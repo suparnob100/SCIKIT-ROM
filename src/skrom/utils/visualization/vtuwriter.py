@@ -1,29 +1,44 @@
+"""VTU time-series writer.
+
+TL;DR
+-----
+This module writes VTU snapshots and PVD index files for simulation time series.
+
+Notes
+-----
+It accepts meshio or scikit-fem meshes, attaches point data, and records each exported step.
+"""
+
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import meshio
 
-"""
-VTU Series Writer
-
-Utilities to write time-series VTU files and an accompanying PVD collection
-for visualization in ParaView. Supports both meshio.Mesh and SciKit-FEM MeshTet1 inputs.
-"""
 
 class VTUSeriesWriter:
-    """
+    """Collect and export simulation snapshots as VTU and PVD files.
+    
+    TL;DR
+    -----
     Collect and export simulation snapshots as VTU and PVD files.
-
+    
+    Notes
+    -----
     Manages writing of individual VTU files at specified time steps and
     generates a PVD index file for seamless time-series playback.
     """
     def __init__(self, mesh, output_dir, *, prefix="step", skip=2, cell_type="tetra"):
-        """
+        """Initialize the VTU series writer.
+        
+        TL;DR
+        -----
         Initialize the VTU series writer.
-
+        
+        Notes
+        -----
         Converts a SciKit-FEM mesh to meshio.Mesh if necessary and sets up
         output directory and naming conventions for subsequent VTU exports.
-
+        
         Parameters
         ----------
         mesh : meshio.Mesh or MeshTet1
@@ -39,16 +54,16 @@ class VTUSeriesWriter:
         cell_type : str, optional
             Cell type label for meshio (e.g., "tetra", "triangle") when converting
             from SciKit-FEM MeshTet1 (default is "tetra").
-
+        
         Raises
         ------
         TypeError
             If `mesh` is not a meshio.Mesh and lacks attributes `p` and `t` for conversion.
-
+        
         Examples
         --------
         >>> writer = VTUSeriesWriter(mesh, "output/vtu", prefix="temp", skip=5)
-
+        
         [Author: Suparno Bhattacharyya]
         """
         # Convert SciKit-FEM mesh to meshio.Mesh if necessary
@@ -72,12 +87,17 @@ class VTUSeriesWriter:
         self.entries = []
 
     def write_step(self, u, t, idx):
-        """
+        """Write a VTU file for a simulation snapshot.
+        
+        TL;DR
+        -----
         Write a VTU file for a simulation snapshot.
-
+        
+        Notes
+        -----
         Creates a meshio.Mesh with updated point_data and writes it to disk if
         the snapshot index matches the skip interval.
-
+        
         Parameters
         ----------
         u : array_like
@@ -87,15 +107,15 @@ class VTUSeriesWriter:
             Simulation time corresponding to this snapshot.
         idx : int
             Snapshot index; only written if `idx % skip == 0`.
-
+        
         Returns
         -------
         None
-
+        
         Examples
         --------
         >>> writer.write_step(temp_array, time, step_index)
-
+        
         [Author: Suparno Bhattacharyya]
         """
         if idx % self.skip != 0:
@@ -112,25 +132,30 @@ class VTUSeriesWriter:
         self.entries.append((t, filename))
 
     def write_pvd(self, pvd_name="collection.pvd"):
-        """
+        """Generate a PVD collection file for all written VTU snapshots.
+        
+        TL;DR
+        -----
         Generate a PVD collection file for all written VTU snapshots.
-
+        
+        Notes
+        -----
         Iterates over recorded entries and constructs an XML-based PVD file
         that ParaView can use to load time-series data.
-
+        
         Parameters
         ----------
         pvd_name : str, optional
             Filename for the PVD output (default is "collection.pvd").
-
+        
         Returns
         -------
         None
-
+        
         Examples
         --------
         >>> writer.write_pvd("simulation.pvd")
-
+        
         [Author: Suparno Bhattacharyya]
         """
         root = ET.Element(

@@ -1,24 +1,14 @@
+"""ECSW hyper-reduction for linear forms.
+
+TL;DR
+-----
+This module assembles reduced load vectors with sparse ECSW element weights.
+
+Notes
+-----
+It clusters active elements, projects local load vectors, and accumulates weighted reduced vectors.
 """
-hyperreduce/linear_form_hyperrom.py
------------------------------------
-Implements Hyper-Reduction (HYPERROM) for reduced-order load vector assembly.
 
-This module provides:
-  - `LinearFormHYPERROM`: a subclass of `skfem.assembly.form.linear_form.LinearForm`
-    that projects element-wise load contributions onto a reduced basis, clusters
-    elements by free-DOF count after Dirichlet condensation, and assembles the
-    global reduced load vector via vectorized weighted projections.
-
-The `hyperreduce` folder contains all tools to perform hyper-reduction, including:
-  - Reduced-order bilinear forms (`BilinearFormHYPERROM`) and linear forms
-    (`LinearFormHYPERROM`)
-  - Routines for extracting element stiffness matrices and load vectors in a
-    reduced basis
-  - Utilities for efficient handling of Dirichlet conditions and element clustering
-  - Support for weights, parallelization, and reconstruction of full-order data
-
-  [Author: Suparno Bhattacharyya]
-"""
 from typing import Optional, Any
 from types import MethodType
 from threading import Thread
@@ -31,7 +21,12 @@ from skfem.assembly.basis import AbstractBasis, FacetBasis
 from numpy.typing import DTypeLike 
 
 def with_elements(self, elements: Optional[Any] = None) -> 'FacetBasis':
-    """Return a similar basis on a subset of element indices."""
+    """Return a similar basis on a subset of element indices.
+    
+    TL;DR
+    -----
+    Return a similar basis on a subset of element indices.
+    """
     return type(self)(
         self.mesh,
         self.elem,
@@ -41,15 +36,20 @@ def with_elements(self, elements: Optional[Any] = None) -> 'FacetBasis':
     )
 
 class LinearFormHYPERROM_ecsw(LinearForm):
-    """
+    """Reduced-order linear form for hyper-reduction of load vectors.
+    
+    TL;DR
+    -----
     Reduced-order linear form for hyper-reduction of load vectors.
-
+    
+    Notes
+    -----
     Projects element-level load vectors onto a reduced basis and assembles the
     global reduced load vector. Handles Dirichlet boundary conditions via mapping
     from full degrees of freedom (DOFs) to free (non-Dirichlet) DOFs. All operations
     occur only on free DOFs, with Dirichlet and mean field contributions reinserted
     during reconstruction.
-
+    
     Parameters
     ----------
     form : callable
@@ -76,9 +76,12 @@ class LinearFormHYPERROM_ecsw(LinearForm):
 
     def __init__(self, form, elem_weight, ubasis: Basis, lob, free_dofs: Optional[ndarray] = None,
                  mean: Optional[ndarray] = None, nthreads=0,dtype: DTypeLike = np.float64):
-        """
+        """Initialize the reduced-order linear form and preprocess element clusters.
+        
+        TL;DR
+        -----
         Initialize the reduced-order linear form and preprocess element clusters.
-
+        
         Parameters
         ----------
         form : callable
@@ -98,7 +101,7 @@ class LinearFormHYPERROM_ecsw(LinearForm):
             Number of threads for parallel evaluation of element vectors.
         dtype : data-type, default np.float64
             Data type for intermediate and output arrays.
-
+        
         Raises
         ------
         ValueError
@@ -200,17 +203,22 @@ class LinearFormHYPERROM_ecsw(LinearForm):
 
 
     def _get_mapping(self, basis: Basis) -> ndarray:
-        """
+        """Build a mapping from global DOFs to reduced basis indices.
+        
+        TL;DR
+        -----
         Build a mapping from global DOFs to reduced basis indices.
-
+        
+        Notes
+        -----
         If `free_dofs` was provided, Dirichlet DOFs map to -1 and free DOFs map
         to [0, N_free-1]. Otherwise, returns the identity mapping.
-
+        
         Parameters
         ----------
         basis : Basis
             Basis object containing total DOF count and `free_dofs` attribute.
-
+        
         Returns
         -------
         mapping : ndarray of int
@@ -228,19 +236,24 @@ class LinearFormHYPERROM_ecsw(LinearForm):
 
 
     def assemble_weighted_ecsw(self, **kwargs):
-        """
+        """Assemble the weighted reduced load vector.
+        
+        TL;DR
+        -----
         Assemble the weighted reduced load vector.
-
+        
+        Notes
+        -----
         Each element load vector is multiplied by its weight and projected onto
         the reduced basis (restricted to free DOFs), then summed into a single
         vector of length r.
-
+        
         Parameters
         ----------
         **kwargs
             Additional parameters forwarded to `extract_element_vector_rom`, such
             as previous states or material parameters.
-
+        
         Returns
         -------
         f_reduced : ndarray, shape (r,)
@@ -294,13 +307,18 @@ class LinearFormHYPERROM_ecsw(LinearForm):
     
 
     def extract_element_vector_rom(self, basis: Basis, elem_indices: Optional[np.ndarray] = None, **kwargs):
-        """
+        """Extract local element load vectors in the reduced setting.
+        
+        TL;DR
+        -----
         Extract local element load vectors in the reduced setting.
-
+        
+        Notes
+        -----
         Evaluates the original linear form on each specified element and returns
         an array of shape (n_elem, Nbfun), where Nbfun is the number of local
         basis functions per element.
-
+        
         Parameters
         ----------
         basis : Basis
@@ -309,12 +327,12 @@ class LinearFormHYPERROM_ecsw(LinearForm):
             Subset of elements to include; passed to `with_elements`.
         **kwargs
             Extra keyword arguments forwarded to low-level form evaluation.
-
+        
         Returns
         -------
         element_vectors : ndarray, shape (n_elem, Nbfun)
             Local load vectors for each (restricted) element.
-
+        
         Raises
         ------
         ValueError
@@ -349,6 +367,34 @@ class LinearFormHYPERROM_ecsw(LinearForm):
             indices = np.arange(basis.Nbfun)
             # Define a helper for threaded computation.
             def threaded_kernel_vector(data, idx_chunk, basis_list, wdict, dx):
+                """Assemble vector contributions inside a worker thread.
+                
+                TL;DR
+                -----
+                Assemble vector contributions inside a worker thread.
+                
+                Parameters
+                ----------
+                data : object
+                    Value supplied as `data` for this helper.
+                idx_chunk : object
+                    Value supplied as `idx_chunk` for this helper.
+                basis_list : object
+                    Value supplied as `basis_list` for this helper.
+                wdict : object
+                    Value supplied as `wdict` for this helper.
+                dx : object
+                    Value supplied as `dx` for this helper.
+                
+                Returns
+                -------
+                None
+                    This function updates state or performs work in place.
+                
+                Notes
+                -----
+                This helper is part of the surrounding workflow and keeps behavior local to the caller.
+                """
                 for i in idx_chunk:
                     data[i, :] = self._kernel(basis_list[i], wdict, dx)
             idx_chunks = np.array_split(indices, self.nthreads)

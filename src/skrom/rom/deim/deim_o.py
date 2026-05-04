@@ -1,19 +1,12 @@
-"""
-Discrete Empirical Interpolation Method (DEIM) for nonlinear ROM acceleration.
+"""Alternate DEIM implementation.
 
-This module implements DEIM for reducing the dimension of nonlinear force terms in 
-reduced-order models within finite element frameworks. DEIM enables efficient 
-evaluation of nonlinear terms by:
-- Computing empirical modes from nonlinear force snapshots via SVD
-- Selecting optimal interpolation points using greedy algorithms
-- Constructing projection matrices for fast nonlinear term approximation
-- Mapping selected DOFs to element indicators for efficient assembly
+TL;DR
+-----
+This module provides a second DEIM workflow for interpolation-point and element selection.
 
-**TL;DR**: Dramatically reduces computational cost of nonlinear ROM evaluation 
-by approximating nonlinear terms using interpolation at carefully selected points,
-achieving significant speedups while maintaining accuracy.
-
-Author: Suparno Bhattacharyya
+Notes
+-----
+It mirrors the main DEIM implementation for nonlinear term approximation and selected-element assembly.
 """
 
 import numpy as np
@@ -24,34 +17,35 @@ from scipy.linalg import qr
 
 
 class deim:
-    """
-    Discrete Empirical Interpolation Method for nonlinear ROM acceleration.
-
-    **TL;DR**: Reduces computational cost of nonlinear terms in ROMs by ~1000x 
-    through strategic sampling and interpolation, enabling real-time nonlinear 
-    PDE solutions.
-
+    """Discrete Empirical Interpolation Method for nonlinear ROM acceleration.
+    
+    TL;DR
+    -----
+    Reduces computational cost of nonlinear terms in ROMs by ~1000x through strategic sampling and interpolation, enabling real-time nonlinear PDE solutions.
+    
+    Notes
+    -----
     The Discrete Empirical Interpolation Method (DEIM) addresses the computational 
     bottleneck in nonlinear reduced-order models where nonlinear terms must still 
     be evaluated at all degrees of freedom. DEIM constructs an efficient 
     approximation by:
-
+    
     1. **Empirical Mode Analysis**: Computes dominant modes of nonlinear force 
        snapshots using SVD to capture the essential nonlinear behavior patterns.
-
+    
     2. **Optimal Point Selection**: Uses a greedy algorithm to select interpolation 
        points that maximize information content while minimizing approximation error.
-
+    
     3. **Projection Matrix Construction**: Builds a projection matrix that enables 
        fast reconstruction of full nonlinear terms from interpolated values.
-
+    
     4. **Element Mapping**: Maps selected degrees of freedom to finite element 
        indicators for efficient sparse assembly operations.
-
+    
     The method transforms the nonlinear term evaluation from O(n) to O(m) where 
     m << n, achieving dramatic computational savings essential for real-time 
     applications.
-
+    
     Parameters
     ----------
     mesh : object
@@ -67,7 +61,7 @@ class deim:
     extra_modes : int, default=0
         Additional empirical modes to retain beyond those selected by tolerance
         criterion, useful for capturing marginal nonlinear effects.
-
+    
     Attributes
     ----------
     U_fs : ndarray
@@ -79,7 +73,7 @@ class deim:
         Binary element indicator vector marking which elements contain selected DOFs.
     n_f_sel : int
         Number of empirical modes selected for DEIM approximation.
-
+    
     Notes
     -----
     DEIM is particularly effective for:
@@ -87,16 +81,16 @@ class deim:
     - Real-time control applications requiring fast ROM evaluation  
     - Problems where nonlinear term evaluation dominates computational cost
     - Systems with smooth nonlinear behavior amenable to low-rank approximation
-
+    
     The method assumes the nonlinear terms can be well-approximated by a low-rank 
     representation, which is typically valid for many physical systems.
-
+    
     References
     ----------
     .. [1] Chaturantabut, S. and Sorensen, D.C., 2010. Nonlinear model reduction 
            via discrete empirical interpolation method. SIAM journal on scientific 
            computing, 32(5), pp.2737-2764.
-
+    
     Examples
     --------
     >>> # Generate nonlinear force snapshots
@@ -108,9 +102,12 @@ class deim:
     """
 
     def __init__(self, mesh, F_nl, V_sel, tol_f=1e-2, extra_modes=0):
-        """
+        """Initialize DEIM with nonlinear snapshots and reduction parameters.
+        
+        TL;DR
+        -----
         Initialize DEIM with nonlinear snapshots and reduction parameters.
-
+        
         Parameters
         ----------
         mesh : object
@@ -128,7 +125,7 @@ class deim:
         extra_modes : int, default=0
             Number of additional modes to retain beyond the tolerance-based 
             selection, providing extra approximation capacity.
-
+        
         Notes
         -----
         The nonlinear snapshots F_nl should span the expected parameter range 
@@ -142,29 +139,31 @@ class deim:
         self.F_nl = F_nl                          # Nonlinear force snapshot matrix
 
     def select_elems(self, sopt=False):
-        """
-        Select interpolation points and construct DEIM projection matrix.
-
-        **TL;DR**: Core DEIM algorithm that identifies optimal sampling points 
-        and builds the projection matrix for fast nonlinear term approximation.
-
+        """Select interpolation points and construct DEIM projection matrix.
+        
+        TL;DR
+        -----
+        Core DEIM algorithm that identifies optimal sampling points and builds the projection matrix for fast nonlinear term approximation.
+        
+        Notes
+        -----
         This method performs the complete DEIM setup:
-
+        
         1. **SVD Analysis**: Decomposes nonlinear snapshots to identify dominant 
            empirical modes that capture essential nonlinear behavior patterns.
-
+        
         2. **Mode Selection**: Applies tolerance-based truncation with optional 
            extra modes to balance accuracy and computational efficiency.
-
+        
         3. **Point Selection**: Uses greedy DEIM algorithm to select interpolation 
            points that minimize approximation error in the empirical subspace.
-
+        
         4. **Element Mapping**: Maps selected DOFs to finite element indicators 
            for efficient sparse matrix assembly during online evaluation.
-
+        
         5. **Projection Construction**: Builds the DEIM projection matrix that 
            enables reconstruction: F_full ≈ U_fs @ pinv(U_fs[selected_rows, :]) @ F_sampled
-
+        
         Returns
         -------
         deim_mat : ndarray of shape (n_modes, n_selected_points)
@@ -173,17 +172,17 @@ class deim:
         sampled_rows : list of int
             Indices of degrees of freedom selected as DEIM interpolation points.
             These are the only DOFs where nonlinear terms need evaluation.
-
+        
         Notes
         -----
         The projection matrix construction uses the Moore-Penrose pseudoinverse 
         to ensure numerical stability even when the empirical basis is not 
         perfectly conditioned.
-
+        
         The element mapping (self.xi) enables efficient assembly by identifying 
         which finite elements contribute to the selected DOFs, allowing sparse 
         matrix operations during online evaluation.
-
+        
         Examples
         --------
         >>> deim_obj = deim(mesh, F_snapshots, basis_matrix)
@@ -224,29 +223,31 @@ class deim:
         return self.deim_mat, sampled_rows
 
     def deim_red(self, f_basis, num_f_basis_vectors_used):
-        """
-        Execute greedy DEIM algorithm for optimal interpolation point selection.
-
-        **TL;DR**: Implements the core greedy algorithm that iteratively selects 
-        interpolation points to minimize approximation error in the empirical subspace.
-
+        """Execute greedy DEIM algorithm for optimal interpolation point selection.
+        
+        TL;DR
+        -----
+        Implements the core greedy algorithm that iteratively selects interpolation points to minimize approximation error in the empirical subspace.
+        
+        Notes
+        -----
         The DEIM greedy algorithm works by:
-
+        
         1. **Initial Selection**: Chooses the DOF with maximum absolute value in 
            the first empirical mode as the starting interpolation point.
-
+        
         2. **Iterative Refinement**: For each subsequent mode, solves for optimal 
            interpolation coefficients using previously selected points, then 
            selects the DOF with maximum residual as the next point.
-
+        
         3. **Residual Minimization**: Each new point is chosen to minimize the 
            approximation error when reconstructing the current empirical mode 
            from previously selected points.
-
+        
         This greedy strategy ensures that interpolation points capture maximum 
         information content while maintaining numerical stability through 
         well-conditioned interpolation matrices.
-
+        
         Parameters
         ----------
         f_basis : ndarray of shape (n_dofs, n_modes)
@@ -255,7 +256,7 @@ class deim:
         num_f_basis_vectors_used : int
             Number of empirical modes to use for interpolation point selection.
             Cannot exceed the total number of available modes.
-
+        
         Returns
         -------
         f_basis_sampled : ndarray of shape (num_modes, num_modes)
@@ -264,20 +265,20 @@ class deim:
         sampled_rows : list of int
             Ordered list of DOF indices selected as interpolation points.
             The order reflects the greedy selection sequence.
-
+        
         Notes
         -----
         The algorithm ensures that the interpolation matrix f_basis_sampled 
         remains well-conditioned by construction, as each new point is chosen 
         to maximize the residual norm.
-
+        
         For problems with strong locality in nonlinear effects, DEIM typically 
         selects points near regions of highest nonlinear activity, leading to 
         physically intuitive sampling patterns.
-
+        
         The computational complexity is O(m³) where m is the number of modes, 
         making it efficient even for moderately large empirical subspaces.
-
+        
         Examples
         --------
         >>> # Empirical basis from SVD  
@@ -329,10 +330,13 @@ class deim:
   
     
     def sopt_red(self, f_basis, num_f_basis_vectors_used):
-        """
-        Perform an S-optimal sampling reduction on the given basis. This method uses a QR
+        """Perform an S-optimal sampling reduction on the given basis. This method uses a QR
         factorization to extract an orthogonal basis and then iteratively selects the most
         representative rows (sampling points) based on a defined objective.
+        
+        TL;DR
+        -----
+        Perform an S-optimal sampling reduction on the given basis.
         
         Parameters:
         -----------

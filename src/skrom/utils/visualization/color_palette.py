@@ -1,38 +1,45 @@
+"""Matplotlib color palette helpers.
+
+TL;DR
+-----
+This module applies a fixed color cycle for consistent scikit-rom plots.
+
+Notes
+-----
+The palette helper updates Matplotlib settings and returns the colors that were applied.
+"""
+
 import matplotlib.pyplot as plt
 from cycler import cycler
 
-"""
-Custom Matplotlib color palettes.
-
-This module provides functions to set and retrieve predefined color palettes
-for Matplotlib plots, enabling consistent styling across figures.
-
-[Author: Suparno Bhattacharyya]
-"""
 
 def set_color_palette():
-    """
+    """Set a custom color palette for Matplotlib plots.
+    
+    TL;DR
+    -----
     Set a custom color palette for Matplotlib plots.
-
+    
+    Notes
+    -----
     Defines and applies a predefined list of hexadecimal color codes to Matplotlib's
     ``axes.prop_cycle``, ensuring a consistent sequence of colors for plot elements.
-
+    
     Returns
     -------
     colors : list of str
         A list of hexadecimal color strings representing the palette applied.
-
+    
     Notes
     -----
     - The palette consists of 19 distinct colors chosen for clarity and visual appeal.
     - Applying this palette affects all subsequent plots in the current session.
-
+    
     Examples
     --------
     >>> colors = set_color_palette()
     >>> plt.plot([0, 1, 2], [10, 20, 15])  # uses the first color in the returned palette
     >>> plt.scatter([1, 2, 3], [5, 10, 20])  # uses the next color in the cycle
-
     """
     colors = [
         '#1f77b4', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a',

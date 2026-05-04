@@ -1,11 +1,25 @@
+"""SVD mode selection helpers.
+
+TL;DR
+-----
+This module chooses reduced basis sizes from singular-value energy or uncaptured variance criteria.
+
+Notes
+-----
+The functions can report selected modes and plot variance or singular-value diagnostics.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt                 
 from matplotlib.ticker import MaxNLocator, AutoMinorLocator, LogLocator
 
 def svd_mode_selector_var(data, tolerance=1e-3, modes=False, **kwargs):
-    """
+    """Select SVD modes based on an uncaptured variance tolerance and plot the uncaptured variance.
+    
+    TL;DR
+    -----
     Select SVD modes based on an uncaptured variance tolerance and plot the uncaptured variance.
-
+    
     Parameters
     ----------
     data : array_like, shape (n_samples, n_features) or (n_features, n_samples)
@@ -17,27 +31,27 @@ def svd_mode_selector_var(data, tolerance=1e-3, modes=False, **kwargs):
         If True, prints the number of selected modes. Defaults to False.
     **kwargs
         Additional keyword arguments passed to the plot (e.g., marker style, line width).
-
+    
     Returns
     -------
     num_selected_modes : int
         Number of SVD modes required to meet the specified uncaptured variance tolerance.
     U : ndarray, shape (n_features, n_features)
         Matrix of left singular vectors from the SVD of the input data.
-
+    
     Notes
     -----
     - The function computes the full SVD of the (transposed) data matrix and calculates the
       cumulative sum of squared singular values to measure variance content.
     - Uncaptured variance is defined as one minus the cumulative energy.
     - A horizontal line at `y = tolerance` is drawn on the semilog plot for reference.
-
+    
     Examples
     --------
     >>> num_modes, U = svd_mode_selector_var(data_matrix, tolerance=1e-2)
     >>> print(num_modes)
     5
-
+    
     [Author: Suparno Bhattacharyya]
     """
     data_array = np.asarray(data)
@@ -71,9 +85,12 @@ def svd_mode_selector_var(data, tolerance=1e-3, modes=False, **kwargs):
 
 
 def svd_mode_selector(data, tolerance=1e-3, modes=False, **kwargs):
-    """
+    """Select SVD modes based on relative reconstruction-error tolerance and plot the error.
+    
+    TL;DR
+    -----
     Select SVD modes based on relative reconstruction-error tolerance and plot the error.
-
+    
     Parameters
     ----------
     data : array_like, shape (n_samples, n_features) or (n_features, n_samples)
@@ -85,26 +102,26 @@ def svd_mode_selector(data, tolerance=1e-3, modes=False, **kwargs):
         If True, prints the number of selected modes. Defaults to False.
     **kwargs
         Additional keyword arguments passed to the plot (e.g., marker style, line width).
-
+    
     Returns
     -------
     num_selected_modes : int
         Number of SVD modes required to meet the specified reconstruction-error tolerance.
     U : ndarray, shape (n_features, n_features)
         Matrix of left singular vectors from the SVD of the input data.
-
+    
     Notes
     -----
     - Singular values are flipped to compute residual energy from smallest to largest modes.
     - Relative reconstruction error is defined as the square-root of uncaptured energy divided by
       total energy.
-
+    
     Examples
     --------
     >>> num_modes, U = svd_mode_selector(data_matrix, tolerance=1e-2)
     >>> print(num_modes)
     4
-
+    
     [Author: Suparno Bhattacharyya]
     """
     data_array = np.asarray(data)

@@ -1,32 +1,30 @@
+"""ROM error metrics for flat data.
+
+TL;DR
+-----
+This module computes, plots, and reports error measures between full-order and reduced-order reconstructions.
+
+Notes
+-----
+The functions cover global statistics, per-snapshot diagnostics, optional energy norms, and simple report printing.
 """
-Compute and visualize ROM error metrics for flat data reconstructions.
 
-This module provides:
-  - `compute_rom_error_metrics_flat`: calculates time-dependent and global error measures
-    (L2, L∞, RMSE, MAE, R², explained variance, quantiles, and optional energy norm).
-  - `plot_rom_error_diagnostics_flat`: diagnostic plots including true vs. ROM scatter,
-    spatial snapshots for selected snapshots, and raincloud plots of error and speed-up.
-  - `generate_rom_error_report`: prints a structured summary of global and time-dependent
-    ROM error statistics to the console.
-
-The `rom` folder contains core tools for reduced-order modeling, including:
-  - Assembly abstractions for reduced bilinear and linear forms
-  - Error evaluation and reporting utilities (this module)
-  - Hyper-reduction and cubature integration tools
-
-  [Author: Suparno Bhattacharyya]
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import ptitprince as pt
 import pandas as pd
 
 def compute_rom_error_metrics_flat(u, u_rom, K=None):
-    """
-    compute_rom_error_metrics_flat
-
+    """compute_rom_error_metrics_flat
+    
+    TL;DR
+    -----
+    compute_rom_error_metrics_flat.
+    
+    Notes
+    -----
     Compute various error metrics between full-order and ROM reconstructions for flat data.
-
+    
     Parameters
     ----------
     u : array_like, shape (n_snapshots, n_space)
@@ -35,7 +33,7 @@ def compute_rom_error_metrics_flat(u, u_rom, K=None):
         ROM reconstruction matching the shape of `u`.
     K : array_like, shape (n_space, n_space), optional
         Stiffness matrix for computing the energy-norm error.
-
+    
     Returns
     -------
     metrics : dict
@@ -53,7 +51,7 @@ def compute_rom_error_metrics_flat(u, u_rom, K=None):
             Mean absolute error per snapshot.
         time_avg_rel_L2_error : float
             Average relative L2 error over all snapshots.
-
+    
         global
         ------
         L2_error : float
@@ -77,7 +75,7 @@ def compute_rom_error_metrics_flat(u, u_rom, K=None):
                 Median absolute error.
             p95_error : float
                 95th percentile of absolute errors.
-
+    
         optional
         --------
         energy_norm_error : float
@@ -146,11 +144,16 @@ def compute_rom_error_metrics_flat(u, u_rom, K=None):
 
 
 def plot_rom_error_diagnostics_flat(u, u_rom, rom_relative_error, rom_speed_up, sim_axis, metrics, spatial_shape=None):
-    """
-    plot_rom_error_diagnostics_flat
-
+    """plot_rom_error_diagnostics_flat
+    
+    TL;DR
+    -----
+    plot_rom_error_diagnostics_flat.
+    
+    Notes
+    -----
     Visualize ROM error diagnostics including scatter, spatial snapshots, and raincloud plots.
-
+    
     Parameters
     ----------
     u : array_like, shape (n_snapshots, n_space)
@@ -167,7 +170,7 @@ def plot_rom_error_diagnostics_flat(u, u_rom, rom_relative_error, rom_speed_up, 
         Dictionary of error metrics from compute_rom_error_metrics_flat.
     spatial_shape : tuple of int, optional
         Shape (nx, ny) to reshape spatial data for pcolormesh plots.
-
+    
     Returns
     -------
     None
@@ -218,18 +221,23 @@ def plot_rom_error_diagnostics_flat(u, u_rom, rom_relative_error, rom_speed_up, 
     print("-" * 500)   # simple hyphens
 
 def generate_rom_error_report(metrics, name="ROM Accuracy Report"):
-    """
-    generate_rom_error_report
-
+    """generate_rom_error_report
+    
+    TL;DR
+    -----
+    generate_rom_error_report.
+    
+    Notes
+    -----
     Print a structured summary of ROM error metrics.
-
+    
     Parameters
     ----------
     metrics : dict
         Error metrics dictionary from compute_rom_error_metrics_flat.
     name : str, optional
         Title of the report. Defaults to "ROM Accuracy Report".
-
+    
     Returns
     -------
     None

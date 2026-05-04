@@ -1,16 +1,12 @@
-"""
-VTK export utilities.
+"""VTK export utilities.
 
-This module provides functions for:
-- plotting a 2D field on a scikit-fem basis
-- writing one displacement vector to a VTK file, with mesh translation
-- exporting paired full-order and reduced-order solutions to VTK
-- exporting a displacement time series to VTK with a PVD collection file
-- exporting a point-data time series to VTK on an undeformed mesh
+TL;DR
+-----
+This module writes scikit-fem fields and ROM comparison results to VTK-style output files.
 
 Notes
 -----
-Authors: Suparno Bhattacharyya
+It supports single fields, time series, point data, mesh translation, and PVD collection files.
 """
 
 import os
@@ -21,16 +17,19 @@ import numpy as np
 
 
 def visualize2D(u, basis):
-    """
+    """Plot a scalar field on a 2D scikit-fem basis.
+    
+    TL;DR
+    -----
     Plot a scalar field on a 2D scikit-fem basis.
-
+    
     Parameters
     ----------
     u : array_like
         Field values compatible with the given basis.
     basis : object
         scikit-fem basis.
-
+    
     Returns
     -------
     out
@@ -55,14 +54,19 @@ def save_vtk_solution(
     prefix,
     split_dim: bool = False,
 ):
-    """
+    """Write one solution vector to a VTK file.
+    
+    TL;DR
+    -----
     Write one solution vector to a VTK file.
-
+    
+    Notes
+    -----
     The function extracts nodal degrees of freedom from ``u`` using
     ``basis.nodal_dofs``, scales the nodal values by ``scale``, translates the
     mesh, and writes one ``.vtk`` file. If ``split_dim`` is True, the nodal
     displacement components are stored as scalar point-data fields.
-
+    
     Parameters
     ----------
     u : array_like
@@ -83,11 +87,11 @@ def save_vtk_solution(
     split_dim : bool, optional
         If True, write scalar fields ``u_x``, ``u_y``, ``u_z`` (up to the mesh
         dimension). If False, write only the displaced mesh. Default is False.
-
+    
     Returns
     -------
     None
-
+    
     Notes
     -----
     Authors: Suparno Bhattacharyya
@@ -135,12 +139,17 @@ def generate_vtk(
     split_dim: bool = False,
     clean_out_dir: bool = False,
 ):
-    """
+    """Export paired full-order and reduced-order solutions to VTK.
+    
+    TL;DR
+    -----
     Export paired full-order and reduced-order solutions to VTK.
-
+    
+    Notes
+    -----
     The function selects ``num_test`` random indices and writes one full-order
     and one reduced-order VTK file in a subfolder ``Test_i``.
-
+    
     Parameters
     ----------
     LS_test : sequence of array_like
@@ -162,11 +171,11 @@ def generate_vtk(
         Passed to ``save_vtk_solution``. Default is False.
     clean_out_dir : bool, optional
         If True, remove ``out_dir`` before writing. Default is False.
-
+    
     Returns
     -------
     None
-
+    
     Notes
     -----
     Authors: Suparno Bhattacharyya
@@ -218,12 +227,17 @@ def save_vtk_time_series(
     prefix: str,
     interval: int = 10,
 ):
-    """
+    """Write one VTK per saved time step and write a PVD collection file.
+    
+    TL;DR
+    -----
     Write one VTK per saved time step and write a PVD collection file.
-
+    
+    Notes
+    -----
     The function saves frames named ``{prefix}_{k:04d}.vtk`` and writes a PVD
     file named ``{prefix}.pvd`` that references the frames and their times.
-
+    
     Parameters
     ----------
     U : numpy.ndarray
@@ -242,11 +256,11 @@ def save_vtk_time_series(
         Base name used for VTK frames and the PVD file.
     interval : int, optional
         Save every ``interval`` steps. Default is 10.
-
+    
     Returns
     -------
     None
-
+    
     Notes
     -----
     Authors: Suparno Bhattacharyya
@@ -289,16 +303,21 @@ def save_vtk_time_series_point(
     interval: int = 10,
     point_data_name: str = "Temperature",
 ):
-    """
+    """Write point-data frames to VTK on an undeformed mesh.
+    
+    TL;DR
+    -----
     Write point-data frames to VTK on an undeformed mesh.
-
+    
+    Notes
+    -----
     The function writes frames named ``{prefix}_{k:04d}.vtk`` with a point-data
     array stored under ``point_data_name``.
-
+    
     The time axis handling is:
     - if ``U.shape[0] == n_points``: treat U as (n_points, n_steps) and save columns
     - else: treat U as (n_steps, n_points) and save rows
-
+    
     Parameters
     ----------
     U : numpy.ndarray
@@ -313,11 +332,11 @@ def save_vtk_time_series_point(
         Save every ``interval`` steps. Default is 10.
     point_data_name : str, optional
         Key used in VTK point_data. Default is "Temperature".
-
+    
     Returns
     -------
     None
-
+    
     Notes
     -----
     Authors: Suparno Bhattacharyya
@@ -350,16 +369,21 @@ def save_vtu_time_series_point(
     interval: int = 10,
     point_data_name: str = "Temperature",
 ):
-    """
+    """Write point-data frames to VTK on an undeformed mesh.
+    
+    TL;DR
+    -----
     Write point-data frames to VTK on an undeformed mesh.
-
+    
+    Notes
+    -----
     The function writes frames named ``{prefix}_{k:04d}.vtk`` with a point-data
     array stored under ``point_data_name``.
-
+    
     The time axis handling is:
     - if ``U.shape[0] == n_points``: treat U as (n_points, n_steps) and save columns
     - else: treat U as (n_steps, n_points) and save rows
-
+    
     Parameters
     ----------
     U : numpy.ndarray
@@ -374,11 +398,11 @@ def save_vtu_time_series_point(
         Save every ``interval`` steps. Default is 10.
     point_data_name : str, optional
         Key used in VTK point_data. Default is "Temperature".
-
+    
     Returns
     -------
     None
-
+    
     Notes
     -----
     Authors: Suparno Bhattacharyya
@@ -404,9 +428,12 @@ def save_vtu_time_series_point(
 
 
 def save_vtu_time_series_point_vertexsample(U, mesh, basis, run_dir, prefix, interval=8, point_data_name="Temperature"):
-    """
-    U: (n_steps, ndofs_P2)
+    """U: (n_steps, ndofs_P2)
     Saves vertex-sampled field (n_vertices,) on the original mesh.
+    
+    TL;DR
+    -----
+    U: (n_steps, ndofs_P2).
     """
     run_dir.mkdir(parents=True, exist_ok=True)
 

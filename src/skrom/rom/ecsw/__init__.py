@@ -1,12 +1,10 @@
-"""
-The `ecsw` folder implements Empirical Cubature Subset Weighting (ECSW) methods.
+"""ECSW hyper-reduction package.
 
-Contents:
-  - `nnls_solver.py`: Active‐set bounded NNLS solver (`NNLSSolver`) with L₂/L∞ criteria
-    for computing nonnegative cubature weights under per-entry bounds.
-  - Utilities for convergence testing (`NNLS_termination`), argument verification,
-    and solver configuration.
-  
-Together, these tools select and weight integration points to approximate high‐dimensional
-integrals with a sparse subset, enabling efficient reduced‐order model assembly.
+TL;DR
+-----
+This package groups Energy-Conserving Sampling and Weighting tools for sparse weighted assembly.
+
+Notes
+-----
+It includes NNLS solvers, hyper-reduction training, and weighted form assemblers.
 """

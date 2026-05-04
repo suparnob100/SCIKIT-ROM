@@ -1,22 +1,14 @@
+"""ROM error metrics for snapshot-time-space data.
+
+TL;DR
+-----
+This module compares full-order and reduced-order fields when data may include snapshot, time, and space axes.
+
+Notes
+-----
+It normalizes axis order, computes error tables, prints reports, and builds diagnostic plots for time-aware ROM studies.
 """
-Compute and visualize ROM error metrics for flat (vectorized) data reconstructions.
 
-This module provides:
-  - compute_rom_error_metrics_flat: calculates time-dependent and global error measures
-    (L2, L∞, RMSE, MAE, R², explained variance, quantiles, and optional energy norm).
-  - plot_rom_error_diagnostics_flat: diagnostic plots including true vs. ROM scatter,
-    spatial snapshots for selected snapshots, and raincloud plots of error and speed-up.
-  - generate_rom_error_report: prints a structured summary of global and time-dependent
-    ROM error statistics to the console.
-
-Notes on shapes
----------------
-Supported shapes for u and u_rom:
-  - (n_snapshots, n_space)
-  - (n_snapshots, n_time, n_space)
-
-If your data uses a different axis order, pass snapshot_axis/time_axis/space_axis.
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -28,9 +20,14 @@ def _move_axes_to_sts(a: np.ndarray,
                       snapshot_axis: int,
                       time_axis: int | None,
                       space_axis: int) -> np.ndarray:
-    """
+    """Return a view of `a` with axes ordered as (snapshot, time?, space).
+    
+    TL;DR
+    -----
     Return a view of `a` with axes ordered as (snapshot, time?, space).
-
+    
+    Notes
+    -----
     - If a.ndim == 2, output is (n_snap, n_space)
     - If a.ndim == 3, output is (n_snap, n_time, n_space)
     """
@@ -58,9 +55,12 @@ def compute_rom_error_metrics_flat(u,
                                   time_axis: int | None = None,
                                   space_axis: int = -1,
                                   eps: float = 1e-30) -> dict:
-    """
+    """Compute various error metrics between full-order and ROM reconstructions.
+    
+    TL;DR
+    -----
     Compute various error metrics between full-order and ROM reconstructions.
-
+    
     Parameters
     ----------
     u, u_rom
@@ -75,7 +75,7 @@ def compute_rom_error_metrics_flat(u,
         For 2D arrays, keep time_axis=None.
     eps
         Small number to avoid division-by-zero.
-
+    
     Returns
     -------
     metrics : dict
@@ -214,9 +214,12 @@ def compute_rom_error_metrics_flat(u,
 
 
 def generate_rom_error_report(metrics, name="ROM Accuracy Report"):
-    """
+    """Print a structured summary of ROM error metrics.
+    
+    TL;DR
+    -----
     Print a structured summary of ROM error metrics.
-
+    
     Parameters
     ----------
     metrics : dict
@@ -276,9 +279,14 @@ def plot_rom_param_diagnostics_t(
     log_error=True,
     use_raincloud=True,         # needs pandas + ptitprince
 ):
-    """
-    u, u_rom: (p, t, dof)
-
+    """u, u_rom: (p, t, dof)
+    
+    TL;DR
+    -----
+    u, u_rom: (p, t, dof).
+    
+    Notes
+    -----
     Plots:
       1) per-parameter aggregated relative error (bar)
       2) per-parameter per-timestep error (boxplot)
@@ -325,10 +333,54 @@ def plot_rom_param_diagnostics_t(
 
     # ------------- helpers -------------
     def _maybe_log(v):
+        """Print a message only when verbose output is enabled.
+        
+        TL;DR
+        -----
+        Print a message only when verbose output is enabled.
+        
+        Parameters
+        ----------
+        v : object
+            Value supplied as `v` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         v = np.asarray(v)
         return np.log10(np.maximum(v, eps)) if log_error else v
 
     def _raincloud_1d(values, xlabel, figsize=(8.7, 2.4)):
+        """Draw a one-dimensional raincloud-style diagnostic plot.
+        
+        TL;DR
+        -----
+        Draw a one-dimensional raincloud-style diagnostic plot.
+        
+        Parameters
+        ----------
+        values : object
+            Value supplied as `values` for this helper.
+        xlabel : object
+            Value supplied as `xlabel` for this helper.
+        figsize : object
+            Value supplied as `figsize` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         import pandas as pd
         import ptitprince as pt
 

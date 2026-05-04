@@ -1,40 +1,25 @@
-"""
-Utilities for ROM workflows.
+"""General ROM workflow utilities.
 
-The module includes functions for:
-- snapshot index splitting for training and testing
-- parameter sampling (Sobol, Latin hypercube, Gaussian)
-- basis updates by deflation and augmentation
-- reconstruction from reduced to full coordinates
-- ROM data save/load helpers
-- Newton solvers for reduced and hyper-reduced systems
-- residual collection routines used in hyperreduction
+TL;DR
+-----
+This module provides sampling, basis updates, reconstruction, data loading, Newton solvers, and residual collection helpers.
 
 Notes
 -----
-Authors: Suparno Bhattacharyya; Ali Hamza Abidi Syed
+These utilities support both standard ROM solves and hyper-reduction training paths.
 """
-"""
-Utilities used in ROM workflows.
 
-Contents
---------
-- Snapshot index splitting for training and testing
-- Sample generation (Sobol, LHS, Gaussian)
-- Basis update by deflation and augmentation
-- Reconstruction from reduced coordinates to full coordinates
-- ROM data save/load helpers
-- Newton solvers used in ROM and hyper-ROM steps
-- Residual collection helpers for hyperreduction
-"""
 from skrom.utils.imports import *
 from scipy.linalg.blas import dgemm, sgemm
 
 
 def train_test_split(N_snap, N_sel=None, train_percentage=0.8):
-    """
+    """Create boolean masks that split snapshot indices into train and test sets.
+    
+    TL;DR
+    -----
     Create boolean masks that split snapshot indices into train and test sets.
-
+    
     Parameters
     ----------
     N_snap : int
@@ -43,7 +28,7 @@ def train_test_split(N_snap, N_sel=None, train_percentage=0.8):
         Count of indices to select before the split. If None, use all indices.
     train_percentage : float
         Fraction assigned to the train set.
-
+    
     Returns
     -------
     train_mask : ndarray[bool], shape (N_snap,)
@@ -68,16 +53,19 @@ def train_test_split(N_snap, N_sel=None, train_percentage=0.8):
 
 
 def latin_hypercube_train_test_split(N_snap, train_percentage=0.8):
-    """
+    """Create train/test masks by ordering indices from a Latin hypercube draw.
+    
+    TL;DR
+    -----
     Create train/test masks by ordering indices from a Latin hypercube draw.
-
+    
     Parameters
     ----------
     N_snap : int
         Count of snapshots.
     train_percentage : float
         Fraction assigned to the train set.
-
+    
     Returns
     -------
     train_mask : ndarray[bool], shape (N_snap,)
@@ -100,16 +88,19 @@ def latin_hypercube_train_test_split(N_snap, train_percentage=0.8):
 
 
 def sobol_train_test_split(N_snap, train_percentage=0.8):
-    """
+    """Create train/test masks by ordering indices from a Sobol draw.
+    
+    TL;DR
+    -----
     Create train/test masks by ordering indices from a Sobol draw.
-
+    
     Parameters
     ----------
     N_snap : int
         Count of snapshots.
     train_percentage : float
         Fraction assigned to the train set.
-
+    
     Returns
     -------
     train_mask : ndarray[bool], shape (N_snap,)
@@ -136,9 +127,12 @@ def sobol_train_test_split(N_snap, train_percentage=0.8):
 
 
 def generate_sobol(dimensions, num_points, bounds):
-    """
+    """Generate Sobol samples and scale them to bounds.
+    
+    TL;DR
+    -----
     Generate Sobol samples and scale them to bounds.
-
+    
     Parameters
     ----------
     dimensions : int
@@ -147,7 +141,7 @@ def generate_sobol(dimensions, num_points, bounds):
         Count of samples. Input is used as 2**m with m = log2(num_points).
     bounds : list[tuple[float, float]]
         (lower, upper) for each parameter.
-
+    
     Returns
     -------
     scaled_samples : ndarray, shape (num_points, dimensions)
@@ -165,9 +159,12 @@ def generate_sobol(dimensions, num_points, bounds):
 
 
 def generate_lhs(dimensions, num_points, bounds):
-    """
+    """Generate Latin hypercube samples and scale them to bounds.
+    
+    TL;DR
+    -----
     Generate Latin hypercube samples and scale them to bounds.
-
+    
     Parameters
     ----------
     dimensions : int
@@ -176,7 +173,7 @@ def generate_lhs(dimensions, num_points, bounds):
         Count of samples.
     bounds : list[tuple[float, float]]
         (lower, upper) for each parameter.
-
+    
     Returns
     -------
     scaled_samples : ndarray, shape (num_points, dimensions)
@@ -194,12 +191,17 @@ def generate_lhs(dimensions, num_points, bounds):
 
 
 def generate_gaussian_samples(dimensions, num_points, bounds):
-    """
+    """Generate samples from normal draws based on bounds.
+    
+    TL;DR
+    -----
     Generate samples from normal draws based on bounds.
-
+    
+    Notes
+    -----
     Mean is (lower+upper)/2.
     Std is (upper-lower)/5.
-
+    
     Parameters
     ----------
     dimensions : int
@@ -208,7 +210,7 @@ def generate_gaussian_samples(dimensions, num_points, bounds):
         Count of samples.
     bounds : list[tuple[float, float]]
         (lower, upper) for each parameter.
-
+    
     Returns
     -------
     samples : ndarray, shape (num_points, dimensions)
@@ -231,16 +233,19 @@ def generate_gaussian_samples(dimensions, num_points, bounds):
 
 
 def update_basis(V, W_mu, max_modes=5):
-    """
+    """Update a basis by deflating snapshots and appending modes from an SVD.
+    
+    TL;DR
+    -----
     Update a basis by deflating snapshots and appending modes from an SVD.
-
+    
     Steps
     -----
     1) Deflate snapshots: W_deflated = W_mu - V(V^T W_mu)
     2) Compute SVD of W_deflated
     3) Append up to max_modes left singular vectors
     4) Re-orthonormalize by QR
-
+    
     Parameters
     ----------
     V : ndarray, shape (N_h, r_old)
@@ -249,7 +254,7 @@ def update_basis(V, W_mu, max_modes=5):
         Snapshot matrix for one parameter value.
     max_modes : int
         Cap on appended modes.
-
+    
     Returns
     -------
     V_new : ndarray, shape (N_h, r_old + k)
@@ -270,9 +275,12 @@ def update_basis(V, W_mu, max_modes=5):
 
 
 def reconstruct_solution(u_reduced, V_sel, mean):
-    """
+    """Map reduced coordinates to full coordinates and add the mean.
+    
+    TL;DR
+    -----
     Map reduced coordinates to full coordinates and add the mean.
-
+    
     Parameters
     ----------
     u_reduced : ndarray
@@ -281,7 +289,7 @@ def reconstruct_solution(u_reduced, V_sel, mean):
         Basis matrix used for reconstruction.
     mean : ndarray, shape (N_h,)
         Mean field used in centering.
-
+    
     Returns
     -------
     u_complete : ndarray
@@ -297,20 +305,25 @@ def reconstruct_solution(u_reduced, V_sel, mean):
 
 
 def rom_data_gen(save_kw, problem_path):
-    """
+    """Save ROM outputs to a ROM_data folder.
+    
+    TL;DR
+    -----
     Save ROM outputs to a ROM_data folder.
-
+    
+    Notes
+    -----
     This function stores:
     - fos_solutions.npy
     - ROM_simulation_data.npz (all other items from save_kw)
-
+    
     Parameters
     ----------
     save_kw : dict
         Data to save. Must contain key "fos_solutions".
     problem_path : str or Path
         Path to the problem folder.
-
+    
     Raises
     ------
     KeyError
@@ -334,21 +347,24 @@ def rom_data_gen(save_kw, problem_path):
 
 
 def load_rom_data(self, rom_data_dir: str | Path | None = None):
-    """
+    """Load ROM data from a ROM_data folder.
+    
+    TL;DR
+    -----
     Load ROM data from a ROM_data folder.
-
+    
     Behavior
     --------
     - If self is None, return (fos_solutions, sim_data_dict).
     - If self is not None, set attributes on self and return None.
-
+    
     Parameters
     ----------
     self : object or None
         Target instance that holds problem_name, or None for return mode.
     rom_data_dir : str | Path | None
         Path to ROM_data, or a module path string, or None for auto path.
-
+    
     Returns
     -------
     (fos_solutions, sim_data) : tuple
@@ -389,14 +405,17 @@ def load_rom_data(self, rom_data_dir: str | Path | None = None):
 
 
 def _ensure_csr(mat):
-    """
+    """Convert matrix input to CSR sparse matrix.
+    
+    TL;DR
+    -----
     Convert matrix input to CSR sparse matrix.
-
+    
     Parameters
     ----------
     mat : array_like or sparse matrix or 0-d object array
         Matrix input.
-
+    
     Returns
     -------
     csr : scipy.sparse.csr_matrix
@@ -408,12 +427,17 @@ def _ensure_csr(mat):
 
 
 def newton_hyper_rom_solver(assemble_func, u, tol=3e-2, maxit=200, param=None):
-    """
+    """Newton solve for a reduced system defined by assemble_func.
+    
+    TL;DR
+    -----
     Newton solve for a reduced system defined by assemble_func.
-
+    
+    Notes
+    -----
     assemble_func(u, param) must return (A, y) such that:
         A * delta = -y
-
+    
     Parameters
     ----------
     assemble_func : callable
@@ -426,7 +450,7 @@ def newton_hyper_rom_solver(assemble_func, u, tol=3e-2, maxit=200, param=None):
         Iteration cap.
     param : any
         Input passed to assemble_func.
-
+    
     Returns
     -------
     u : ndarray
@@ -627,6 +651,21 @@ def newton_hyper_rom_solver(assemble_func, u, tol=3e-2, maxit=200, param=None):
 
 
 def _petsc_available() -> bool:
+    """Check whether the optional PETSc solver stack is available.
+    
+    TL;DR
+    -----
+    Check whether the optional PETSc solver stack is available.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper keeps optional PETSc imports from being required at module import time.
+    """
     try:
         from petsc4py import PETSc  # noqa: F401
         return True
@@ -644,6 +683,38 @@ def _iter_solve_scipy(
     maxit: int = 500,
     M=None,                      # optional preconditioner (scipy LinearOperator)
 ):
+    """Solve a linear system with SciPy iterative solvers.
+    
+    TL;DR
+    -----
+    Solve a linear system with SciPy iterative solvers.
+    
+    Parameters
+    ----------
+    A : object
+        Value supplied as `A` for this helper.
+    b : object
+        Value supplied as `b` for this helper.
+    method : object
+        Value supplied as `method` for this helper.
+    rtol : object
+        Value supplied as `rtol` for this helper.
+    atol : object
+        Value supplied as `atol` for this helper.
+    maxit : object
+        Value supplied as `maxit` for this helper.
+    M : object
+        Value supplied as `M` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     from scipy.sparse.linalg import cg, gmres, minres
 
     method = method.lower()
@@ -672,6 +743,40 @@ def _iter_solve_petsc(
     maxit: int = 500,
     petsc_options: dict | None = None,
 ):
+    """Solve a linear system with PETSc iterative solvers.
+    
+    TL;DR
+    -----
+    Solve a linear system with PETSc iterative solvers.
+    
+    Parameters
+    ----------
+    A : object
+        Value supplied as `A` for this helper.
+    b : object
+        Value supplied as `b` for this helper.
+    ksp_type : object
+        Value supplied as `ksp_type` for this helper.
+    pc_type : object
+        Value supplied as `pc_type` for this helper.
+    rtol : object
+        Value supplied as `rtol` for this helper.
+    atol : object
+        Value supplied as `atol` for this helper.
+    maxit : object
+        Value supplied as `maxit` for this helper.
+    petsc_options : object
+        Value supplied as `petsc_options` for this helper.
+    
+    Returns
+    -------
+    object
+        Value produced by the helper.
+    
+    Notes
+    -----
+    This helper is part of the surrounding workflow and keeps behavior local to the caller.
+    """
     if not _petsc_available():
         raise RuntimeError("PETSc not available")
 
@@ -732,9 +837,14 @@ def solve_linear(
     petsc_pc: str = "jacobi",
     petsc_options: dict | None = None,
 ):
-    """
+    """Solve A x = b with a chosen backend.
+    
+    TL;DR
+    -----
     Solve A x = b with a chosen backend.
-
+    
+    Notes
+    -----
     Notes:
       - CG requires SPD.
       - MINRES requires symmetric (can be indefinite).
@@ -780,9 +890,12 @@ def newton_solver_rom(
     verbose: bool = True,
     **kwargs,
 ):
-    """
-    Single-mode ROM Newton: always solve (A * delta = -y) each iteration
+    """Single-mode ROM Newton: always solve (A * delta = -y) each iteration
     using the selected linear backend (dense direct or iterative).
+    
+    TL;DR
+    -----
+    Single-mode ROM Newton: always solve (A * delta = -y) each iteration.
     """
     u = np.array(u0, dtype=np.float64, copy=True)
     cur_alpha = float(alpha)
@@ -849,14 +962,41 @@ def newton_hyper_rom_solver2(
     petsc_options: dict | None = None,
     verbose: bool = True,
 ):
-    """
-    Hyper-ROM Newton wrapper:
+    """Hyper-ROM Newton wrapper:
       J_rom_fn(u, *J_args) -> J(u)   (dense reduced Jacobian)
       rhs_rom_fn(u, *rhs_args) -> R(u) (reduced residual)
     Solves: J(u) * delta = -R(u)
+    
+    TL;DR
+    -----
+    Hyper-ROM Newton wrapper:.
     """
 
     def assemble_func(u, *_, **__):
+        """Assemble a reduced residual contribution for one parameter sample.
+        
+        TL;DR
+        -----
+        Assemble a reduced residual contribution for one parameter sample.
+        
+        Parameters
+        ----------
+        u : object
+            Value supplied as `u` for this helper.
+        *_ : object
+            Value supplied as `_` for this helper.
+        **__ : object
+            Value supplied as `__` for this helper.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         J = J_rom_fn(u, *J_args)
         R = rhs_rom_fn(u, *rhs_args)
         return J, R
@@ -890,16 +1030,21 @@ def collect_residuals(
     extra_kwargs=None,
     hyper_basis=None,
 ):
-    """
+    """Evaluate and store residual samples used in hyperreduction training.
+    
+    TL;DR
+    -----
     Evaluate and store residual samples used in hyperreduction training.
-
+    
+    Notes
+    -----
     For each snapshot:
     - project snapshot to reduced coordinates
     - reconstruct a field
     - build keyword arguments by assemble_kwargs
     - call Residual.hyperreduction(**kw)
     - stack results along axis 0
-
+    
     Parameters
     ----------
     NLS_train_ms : ndarray
@@ -920,7 +1065,7 @@ def collect_residuals(
         Dict merged into kw.
     hyper_basis : object or None
         If given, call hyper_basis.interpolate(u_recon) before assemble_kwargs.
-
+    
     Returns
     -------
     q_mus : ndarray
@@ -963,16 +1108,21 @@ def collect_residuals_ecm(
     extra_kwargs=None,
     hyper_basis=None,
 ):
-    """
+    """Evaluate and store ECM residual samples at the element–Gauss-point level.
+    
+    TL;DR
+    -----
     Evaluate and store ECM residual samples at the element–Gauss-point level.
-
+    
+    Notes
+    -----
     For each snapshot this routine:
     - projects the mean-shifted snapshot to reduced coordinates,
     - reconstructs the full field,
     - evaluates ``Residual.hyperreduction_ecm(**kw)``, and
     - stacks the transposed result so each snapshot contributes a block of shape
       ``(r, n_elements * n_q)``.
-
+    
     Returns
     -------
     q_mus_ecm : ndarray, shape (n_snapshots * r, n_elements * n_q)
@@ -1014,12 +1164,17 @@ def collect_residuals_t(
     extra_kwargs=None,
     hyper_basis=None,
 ):
-    """
+    """Evaluate residual samples for a set of snapshot groups.
+    
+    TL;DR
+    -----
     Evaluate residual samples for a set of snapshot groups.
-
+    
+    Notes
+    -----
     This variant loops over an outer list/array of snapshot groups and
     applies downsampling by index.
-
+    
     Parameters
     ----------
     NLS_train_ms : sequence
@@ -1042,7 +1197,7 @@ def collect_residuals_t(
         Dict merged into kw.
     hyper_basis : object or None
         If given, call hyper_basis.interpolate(u_recon) before assemble_kwargs.
-
+    
     Returns
     -------
     q_mus : ndarray
@@ -1077,13 +1232,18 @@ def collect_residuals_t(
 
 
 def select_elements_and_gauss_weights(n_gauss_points, element_indices, weights):
-    """
+    """Build a mapping from element index to a weight list per Gauss point.
+    
+    TL;DR
+    -----
     Build a mapping from element index to a weight list per Gauss point.
-
+    
+    Notes
+    -----
     Input indices are Gauss-point indices. The mapping includes one entry per
     element that appears in element_indices. For each mapped element, the list
     length equals n_gauss_points. Unselected Gauss points keep weight 0.0.
-
+    
     Parameters
     ----------
     n_gauss_points : int
@@ -1092,7 +1252,7 @@ def select_elements_and_gauss_weights(n_gauss_points, element_indices, weights):
         Gauss-point indices selected by a sampling step.
     weights : sequence[float]
         Weights aligned with element_indices.
-
+    
     Returns
     -------
     element_to_gauss_weights : dict[int, list[float]]
@@ -1117,9 +1277,12 @@ def compute_nonlinear_snapshots(
     fos_solutions,
     param_list,
 ) -> np.ndarray:
-    """
+    """Evaluate a function on each (solution, parameter) pair and stack results.
+    
+    TL;DR
+    -----
     Evaluate a function on each (solution, parameter) pair and stack results.
-
+    
     Parameters
     ----------
     non_linear_func : callable
@@ -1128,7 +1291,7 @@ def compute_nonlinear_snapshots(
         Sequence of full-order solutions.
     param_list : sequence
         Sequence of parameters aligned with fos_solutions.
-
+    
     Returns
     -------
     F_nl : ndarray

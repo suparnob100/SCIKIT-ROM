@@ -1,22 +1,12 @@
-"""
-ECM-based hyperreduction for finite element bilinear forms.
+"""ECM hyper-reduction for bilinear forms.
 
-This module in a way mirrors the ECSW implementation already present in the repository,
-but promotes the weights from the element level to the element–Gauss-point
-level. The assembly path stays the same at a high level:
+TL;DR
+-----
+This module assembles reduced stiffness matrices using element and Gauss-point ECM weights.
 
-1. restrict to active elements,
-2. cluster elements by the number of free local DOFs,
-3. extract local contributions,
-4. project onto the reduced basis, and
-5. accumulate the reduced operator.
-
-Assumption
-----------
-The stored ECM weights are treated as multiplicative factors applied to
-scikit-fem's native per-Gauss contributions ``form(...) * dx``. If an external
-ECM code returns *absolute* cubature weights, convert them first using the
-helper in ``skrom.rom.ecm.helpers``.
+Notes
+-----
+It clusters active elements, applies weighted quadrature contributions, and projects local matrices onto the reduced basis.
 """
 
 from __future__ import annotations
@@ -36,7 +26,12 @@ from .helpers import dense_ecm_weights, active_ecm_elements, with_elements
 
 
 class BilinearFormHYPERROM_ecm(BilinearForm):
-    """Hyperreduced bilinear form assembled from ECM-selected Gauss points."""
+    """Hyperreduced bilinear form assembled from ECM-selected Gauss points.
+    
+    TL;DR
+    -----
+    Hyperreduced bilinear form assembled from ECM-selected Gauss points.
+    """
 
     def __init__(
         self,
@@ -51,6 +46,44 @@ class BilinearFormHYPERROM_ecm(BilinearForm):
         nthreads: int = 0,
         dtype: DTypeLike = np.float64,
     ):
+        """Initialize the BilinearFormHYPERROM ECM instance.
+        
+        TL;DR
+        -----
+        Initialize the BilinearFormHYPERROM ECM instance.
+        
+        Parameters
+        ----------
+        form : object
+            Value supplied as `form` for this helper.
+        gauss_weight : object
+            Value supplied as `gauss_weight` for this helper.
+        ubasis : object
+            Value supplied as `ubasis` for this helper.
+        lob : object
+            Value supplied as `lob` for this helper.
+        rob : object
+            Value supplied as `rob` for this helper.
+        vbasis : object
+            Value supplied as `vbasis` for this helper.
+        free_dofs : object
+            Value supplied as `free_dofs` for this helper.
+        mean : object
+            Value supplied as `mean` for this helper.
+        nthreads : object
+            Value supplied as `nthreads` for this helper.
+        dtype : object
+            Value supplied as `dtype` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         super().__init__(form)
 
         self.lob = lob
@@ -110,7 +143,12 @@ class BilinearFormHYPERROM_ecm(BilinearForm):
             self.w_cluster.append(self.gauss_weight_rom[idx])
 
     def _get_mapping(self, basis: Basis) -> ndarray:
-        """Map global DOFs to indices used by the stored reduced basis."""
+        """Map global DOFs to indices used by the stored reduced basis.
+        
+        TL;DR
+        -----
+        Map global DOFs to indices used by the stored reduced basis.
+        """
         n_full = basis.N
         if self.free_dofs is None:
             return np.arange(n_full, dtype=int)
@@ -120,7 +158,12 @@ class BilinearFormHYPERROM_ecm(BilinearForm):
         return mapping
 
     def assemble_weighted_ecm(self, **kwargs) -> ndarray:
-        """Assemble the reduced bilinear form using ECM Gauss-point weights."""
+        """Assemble the reduced bilinear form using ECM Gauss-point weights.
+        
+        TL;DR
+        -----
+        Assemble the reduced bilinear form using ECM Gauss-point weights.
+        """
         element_matrices_q = self.extract_element_matrices_qp_rom(
             self.ubasis_rom,
             self.vbasis_rom,
@@ -150,7 +193,12 @@ class BilinearFormHYPERROM_ecm(BilinearForm):
         return k_reduced
 
     def _kernel_qp(self, u, v, w, dx) -> ndarray:
-        """Return per-element, per-Gauss contributions before quadrature summation."""
+        """Return per-element, per-Gauss contributions before quadrature summation.
+        
+        TL;DR
+        -----
+        Return per-element, per-Gauss contributions before quadrature summation.
+        """
         val = np.asarray(self.form(*u, *v, w) * dx, dtype=self.dtype)
         if val.ndim != 2:
             raise ValueError(
@@ -167,6 +215,36 @@ class BilinearFormHYPERROM_ecm(BilinearForm):
         )
 
     def _threaded_kernel_qp(self, data, ix, ubasis, vbasis, wdict, dx):
+        """Assemble quadrature-point contributions inside a worker thread.
+        
+        TL;DR
+        -----
+        Assemble quadrature-point contributions inside a worker thread.
+        
+        Parameters
+        ----------
+        data : object
+            Value supplied as `data` for this helper.
+        ix : object
+            Value supplied as `ix` for this helper.
+        ubasis : object
+            Value supplied as `ubasis` for this helper.
+        vbasis : object
+            Value supplied as `vbasis` for this helper.
+        wdict : object
+            Value supplied as `wdict` for this helper.
+        dx : object
+            Value supplied as `dx` for this helper.
+        
+        Returns
+        -------
+        None
+            This function updates state or performs work in place.
+        
+        Notes
+        -----
+        This helper is part of the surrounding workflow and keeps behavior local to the caller.
+        """
         for ij in ix:
             i, j = ij
             data[j, i] = self._kernel_qp(ubasis[j], vbasis[i], wdict, dx)
@@ -178,9 +256,12 @@ class BilinearFormHYPERROM_ecm(BilinearForm):
         elem_indices: Optional[ndarray] = None,
         **kwargs,
     ) -> ndarray:
-        """
+        """Extract per-Gauss local element matrices.
+        
+        TL;DR
+        -----
         Extract per-Gauss local element matrices.
-
+        
         Returns
         -------
         element_matrices_q : ndarray, shape (n_elem, n_loc_test, n_loc_trial, n_q)

@@ -1,3 +1,14 @@
+"""Training helpers for ECM weights.
+
+TL;DR
+-----
+This module builds ECM weights from residual snapshots and converts them for scikit-rom assemblers.
+
+Notes
+-----
+It supports direct ECM training and a convenience workflow that collects residuals from an existing ROM problem.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -18,9 +29,12 @@ def ECM(
     dtype=np.float64,
     svd_rank=None
 ):
-    """
+    """ECM adapted to scikit-rom.
+    
+    TL;DR
+    -----
     ECM adapted to scikit-rom.
-
+    
     Parameters
     ----------
     q_mus_ecm : ndarray, shape (n_snapshots * r, n_elements * n_gauss_points)
@@ -40,7 +54,7 @@ def ECM(
         Passed to EmpiricalCubatureMethod.SetUp(...).
     dtype : dtype, optional
         Floating-point dtype.
-
+    
     Returns
     -------
     W : ndarray, shape (n_selected,)
@@ -151,9 +165,12 @@ def ECM_from_skrom(
     dtype=np.float64,
     svd_rank=None
 ):
-    """
+    """End-to-end ECM wrapper for the scikit-rom notebook structure.
+    
+    TL;DR
+    -----
     End-to-end ECM wrapper for the scikit-rom notebook structure.
-
+    
     Returns
     -------
     result : dict

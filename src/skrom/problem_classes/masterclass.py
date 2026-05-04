@@ -1,21 +1,12 @@
-"""
-Static reduced-order modeling (ROM) framework.
+"""Static reduced-order modeling workflow.
 
 TL;DR
 -----
-Runs an offline full-order FEM snapshot stage and an online reduced-order solve stage,
-with optional hyper-reduction (DEIM, ECSW, ECM) to lower cost while tracking error and speed.
-
-The module defines:
-- a problem interface based on an abstract base class
-- a registry for problem classes and a factory to instantiate them
-- an offline workflow that runs full-order solves to generate snapshots
-- an online workflow that runs ROM and computes error and timing metrics
-- hooks for hyper-reduction workflows based on DEIM, ECSW, and ECM
+This module registers problem classes and runs full-order, reduced-order, and hyper-reduced simulations.
 
 Notes
 -----
-Authors: Suparno Bhattacharyya; Ali Hamza Abidi Syed
+It provides the base problem interface, problem lookup helpers, checkpoint handling, offline FOM snapshots, and online ROM or hyper-ROM evaluation paths.
 """
 
 from pathlib import Path
@@ -35,9 +26,14 @@ from skrom.rom.rom_utils import rom_data_gen, load_rom_data, reconstruct_solutio
 # WINDOWS-SAFE FILE HELPERS
 # ─────────────────────────────────────────────────────────────
 def _win_long_path(path):
-    """
+    """Return a Windows extended-length path when running on Windows.
+    
+    TL;DR
+    -----
     Return a Windows extended-length path when running on Windows.
-
+    
+    Notes
+    -----
     This avoids FileNotFoundError/OSError caused by long OneDrive/project paths
     during checkpoint writes. On non-Windows systems, it returns the normal
     absolute path string.
@@ -69,9 +65,14 @@ else:
 # PROBLEM REGISTRY AND INTERFACE
 # ─────────────────────────────────────────────────────────────
 class Problem(ABC):
-    """
+    """Interface for parameterized problems used by the ROM workflow.
+    
+    TL;DR
+    -----
     Interface for parameterized problems used by the ROM workflow.
-
+    
+    Notes
+    -----
     The class defines the required methods for:
     - mesh and basis setup
     - affine components of bilinear and linear forms
@@ -82,52 +83,102 @@ class Problem(ABC):
     """
     @abstractmethod
     def domain(self):
-        """Return geometry and FEM bases."""
+        """Return geometry and FEM bases.
+        
+        TL;DR
+        -----
+        Return geometry and FEM bases.
+        """
         pass
 
     @abstractmethod
     def bilinear_forms(self):
-        """Return affine bilinear form components."""
+        """Return affine bilinear form components.
+        
+        TL;DR
+        -----
+        Return affine bilinear form components.
+        """
         pass
 
     @abstractmethod
     def linear_forms(self):
-        """Return affine linear form components."""
+        """Return affine linear form components.
+        
+        TL;DR
+        -----
+        Return affine linear form components.
+        """
         pass
 
     @abstractmethod
     def properties(self):
-        """Return function to compute parameter-dependent coefficients."""
+        """Return function to compute parameter-dependent coefficients.
+        
+        TL;DR
+        -----
+        Return function to compute parameter-dependent coefficients.
+        """
         pass
 
     @abstractmethod
     def parameters(self):
-        """Generate sampling of parameter space."""
+        """Generate sampling of parameter space.
+        
+        TL;DR
+        -----
+        Generate sampling of parameter space.
+        """
         pass
 
     @abstractmethod
     def fom_solver(self):
-        """Solve full-order FEM system for given parameters."""
+        """Solve full-order FEM system for given parameters.
+        
+        TL;DR
+        -----
+        Solve full-order FEM system for given parameters.
+        """
         pass
 
     @abstractmethod
     def rom_solver(self):
-        """Solve reduced-order model for given parameters."""
+        """Solve reduced-order model for given parameters.
+        
+        TL;DR
+        -----
+        Solve reduced-order model for given parameters.
+        """
         pass
 
     @abstractmethod
     def hyper_rom_solver_deim(self):
-        """Solve DEIM-based hyper-reduced system for given parameters."""
+        """Solve DEIM-based hyper-reduced system for given parameters.
+        
+        TL;DR
+        -----
+        Solve DEIM-based hyper-reduced system for given parameters.
+        """
         pass
 
     @abstractmethod
     def hyper_rom_solver_ecsw(self):
-        """Solve ECSW-based hyper-reduced system for given parameters."""
+        """Solve ECSW-based hyper-reduced system for given parameters.
+        
+        TL;DR
+        -----
+        Solve ECSW-based hyper-reduced system for given parameters.
+        """
         pass
 
     @abstractmethod
     def hyper_rom_solver_ecm(self):
-        """Solve ECM-based hyper-reduced system for given parameters."""
+        """Solve ECM-based hyper-reduced system for given parameters.
+        
+        TL;DR
+        -----
+        Solve ECM-based hyper-reduced system for given parameters.
+        """
         pass
 
 
@@ -136,9 +187,14 @@ PROBLEM_REGISTRY: Dict[str, Type[Problem]] = {}
 
 
 def _unify_masterclass_module_aliases() -> None:
-    """
+    """Ensure all imports of this file share the same module object.
+    
+    TL;DR
+    -----
     Ensure all imports of this file share the same module object.
-
+    
+    Notes
+    -----
     This prevents two independent registries when the same file is imported as
     both ``masterclass`` and ``skrom.problem_classes.masterclass``.
     """
@@ -149,34 +205,55 @@ def _unify_masterclass_module_aliases() -> None:
 
 
 def register_problem(name: str):
-    """
+    """Register a problem class under a string key.
+    
+    TL;DR
+    -----
     Register a problem class under a string key.
-
+    
     Parameters
     ----------
     name : str
         Registry key for the problem class.
-
+    
     Returns
     -------
     deco : callable
         Decorator that adds the class to ``PROBLEM_REGISTRY`` and returns it.
-
+    
     Notes
     -----
     The registry supports dynamic selection of a problem class based on the
     working directory name.
     """
     def deco(cls: Type[Problem]) -> Type[Problem]:
+        """Register the decorated problem class.
+        
+        TL;DR
+        -----
+        Register the decorated problem class.
+        
+        Returns
+        -------
+        object
+            Value produced by the helper.
+        
+        Notes
+        -----
+        The surrounding register function returns this decorator to store the class in the registry.
+        """
         PROBLEM_REGISTRY[name] = cls
         return cls
     return deco
 
 
 def _auto_register_problem_from_module(module, name: str) -> None:
-    """
-    Fallback registration for a local ``problem_def.py`` that defines one
+    """Fallback registration for a local ``problem_def.py`` that defines one
     concrete problem class but does not explicitly register it.
+    
+    TL;DR
+    -----
+    Fallback registration for a local ``problem_def.py`` that defines one.
     """
     if name in PROBLEM_REGISTRY:
         return
@@ -220,9 +297,14 @@ def _auto_register_problem_from_module(module, name: str) -> None:
 
 
 def _load_local_problem_module() -> None:
-    """
+    """Import the local ``problem_def.py`` file for the active problem folder.
+    
+    TL;DR
+    -----
     Import the local ``problem_def.py`` file for the active problem folder.
-
+    
+    Notes
+    -----
     Importing this module executes the ``@register_problem(...)`` decorator
     inside the problem definition. This populates ``PROBLEM_REGISTRY`` before
     ``get_problem`` tries to instantiate the selected problem.
@@ -259,19 +341,22 @@ def _load_local_problem_module() -> None:
 
 
 def get_problem(name: str) -> Problem:
-    """
+    """Instantiate a registered problem class.
+    
+    TL;DR
+    -----
     Instantiate a registered problem class.
-
+    
     Parameters
     ----------
     name : str
         Registry key used in ``PROBLEM_REGISTRY``.
-
+    
     Returns
     -------
     problem_instance : Problem
         Instance of the registered class.
-
+    
     Raises
     ------
     ValueError
@@ -291,14 +376,17 @@ def get_problem(name: str) -> Problem:
 
 
 def assign_properties(prob: Problem) -> Tuple:
-    """
+    """Collect callable handles from a problem instance.
+    
+    TL;DR
+    -----
     Collect callable handles from a problem instance.
-
+    
     Parameters
     ----------
     prob : Problem
         Problem instance.
-
+    
     Returns
     -------
     properties : tuple
@@ -332,16 +420,21 @@ def assign_properties(prob: Problem) -> Tuple:
 # OFFLINE SNAPSHOT GENERATION
 # ─────────────────────────────────────────────────────────────
 class fom_simulation:
-    """
+    """Offline snapshot generation workflow.
+    
+    TL;DR
+    -----
     Offline snapshot generation workflow.
-
+    
+    Notes
+    -----
     The workflow:
     - draws parameter samples
     - runs full-order solves
     - stores solutions and solve times
     - computes a reference field for centering
     - saves outputs to a ROM_data directory
-
+    
     Attributes
     ----------
     num_snapshots : int
@@ -357,9 +450,12 @@ class fom_simulation:
     """
 
     def __init__(self, num_snapshots: int = 32):
-        """
+        """Initialize the offline workflow.
+        
+        TL;DR
+        -----
         Initialize the offline workflow.
-
+        
         Parameters
         ----------
         num_snapshots : int, optional
@@ -401,9 +497,14 @@ class fom_simulation:
 
 
     def run_simulation(self) -> None:
-        """
+        """Run full-order solves and save offline outputs.
+        
+        TL;DR
+        -----
         Run full-order solves and save offline outputs.
-
+        
+        Notes
+        -----
         Adds:
         - per-sample checkpointing to .npz
         - resume: if checkpoint exists, load it and skip the solve
@@ -424,11 +525,48 @@ class fom_simulation:
 
         # ---------- helpers ----------
         def _safe_token(s: str, maxlen: int) -> str:
+            """Convert a value into a filesystem-safe text token.
+            
+            TL;DR
+            -----
+            Convert a value into a filesystem-safe text token.
+            
+            Parameters
+            ----------
+            s : object
+                Value supplied as `s` for this helper.
+            maxlen : object
+                Value supplied as `maxlen` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             s = re.sub(r"\s+", "", s)
             s = re.sub(r"[^0-9A-Za-z,.\-+eE_]", "_", s)
             return s[:maxlen]
 
         def _problem_tag() -> str:
+            """Build a stable text tag for a problem instance.
+            
+            TL;DR
+            -----
+            Build a stable text tag for a problem instance.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             return (
                 getattr(self, "PROBLEM_NAME", None)
                 or getattr(self, "problem_name", None)
@@ -436,11 +574,14 @@ class fom_simulation:
             )
 
         def _param_signature(param):
-            """
-            Returns:
+            """Returns:
             preview_token (short, human-readable),
             hash10 (stable),
             stored_param (array or string array for saving inside .npz)
+            
+            TL;DR
+            -----
+            Returns:.
             """
             try:
                 arr = np.asarray(param, dtype=float).ravel()
@@ -459,6 +600,26 @@ class fom_simulation:
             return preview, h10, stored
 
         def _ckpt_path(param) -> Path:
+            """Build the checkpoint path for a parameter sample.
+            
+            TL;DR
+            -----
+            Build the checkpoint path for a parameter sample.
+            
+            Parameters
+            ----------
+            param : object
+                Value supplied as `param` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             preview, h10, _ = _param_signature(param)
             prob = _safe_token(_problem_tag(), maxlen=20)
 
@@ -485,6 +646,28 @@ class fom_simulation:
             # IMPORTANT: temp file must end with ".npz" because np.savez appends
             # the extension otherwise. Use a short temp prefix and Windows
             # extended-length paths to avoid failures in long OneDrive folders.
+            """Save compressed NumPy data through an atomic file replacement.
+            
+            TL;DR
+            -----
+            Save compressed NumPy data through an atomic file replacement.
+            
+            Parameters
+            ----------
+            path : object
+                Value supplied as `path` for this helper.
+            payload : object
+                Value supplied as `payload` for this helper.
+            
+            Returns
+            -------
+            None
+                This function updates state or performs work in place.
+            
+            Notes
+            -----
+            The temporary file is moved into place so incomplete writes are less likely to leave a broken checkpoint.
+            """
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -515,6 +698,34 @@ class fom_simulation:
                         pass
 
         def _save_solution(path: Path, sol, param, elapsed: float, snap_index: int):
+            """Save a computed solution to the checkpoint store.
+            
+            TL;DR
+            -----
+            Save a computed solution to the checkpoint store.
+            
+            Parameters
+            ----------
+            path : object
+                Value supplied as `path` for this helper.
+            sol : object
+                Value supplied as `sol` for this helper.
+            param : object
+                Value supplied as `param` for this helper.
+            elapsed : object
+                Value supplied as `elapsed` for this helper.
+            snap_index : object
+                Value supplied as `snap_index` for this helper.
+            
+            Returns
+            -------
+            None
+                This function updates state or performs work in place.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             _, _, param_store = _param_signature(param)
 
             payload = {
@@ -534,6 +745,26 @@ class fom_simulation:
             _atomic_save_npz(path, payload)
 
         def _load_solution(path: Path):
+            """Load a computed solution from the checkpoint store.
+            
+            TL;DR
+            -----
+            Load a computed solution from the checkpoint store.
+            
+            Parameters
+            ----------
+            path : object
+                Value supplied as `path` for this helper.
+            
+            Returns
+            -------
+            object
+                Value produced by the helper.
+            
+            Notes
+            -----
+            This helper is part of the surrounding workflow and keeps behavior local to the caller.
+            """
             with np.load(path, allow_pickle=False) as data:
                 nsol = int(data["nsol"][0]) if "nsol" in data.files else 1
                 t = float(data["solve_time"][0]) if "solve_time" in data.files else np.nan
@@ -609,16 +840,21 @@ class fom_simulation:
 # ONLINE ROM EVALUATION
 # ─────────────────────────────────────────────────────────────
 class rom_simulation:
-    """
+    """Online ROM evaluation workflow.
+    
+    TL;DR
+    -----
     Online ROM evaluation workflow.
-
+    
+    Notes
+    -----
     The workflow:
     - loads ROM_data outputs from disk
     - selects test parameters and reference full-order solutions
     - runs ROM solvers and reconstructs full fields
     - computes relative error and time ratio metrics
     - supports hyper-reduced solvers based on DEIM and ECSW
-
+    
     Attributes
     ----------
     V_sel : ndarray
@@ -638,9 +874,12 @@ class rom_simulation:
         train_mask=None, test_mask=None,
         V_sel=None, n_sel=None, N_rom_snap=None
     ):
-        """
+        """Initialize the online workflow and load ROM_data outputs.
+        
+        TL;DR
+        -----
         Initialize the online workflow and load ROM_data outputs.
-
+        
         Parameters
         ----------
         train_ref : ndarray, optional
@@ -659,7 +898,7 @@ class rom_simulation:
             Mode count used by the ROM.
         N_rom_snap : int, optional
             Test case count evaluated in the run. If None, uses all test cases.
-
+        
         Notes
         -----
         The initializer loads ``ROM_data`` from the current working directory.
@@ -717,15 +956,20 @@ class rom_simulation:
         unwrap_attr(self, 'mesh')
 
     def run_rom_simulation(self, full_order = True, new_params = None):
-        """
+        """Run ROM evaluation.
+        
+        TL;DR
+        -----
         Run ROM evaluation.
-
+        
+        Notes
+        -----
         The method:
         - runs the reduced solver for each parameter
         - reconstructs a full field from reduced coordinates when requested
         - computes relative error in percent on the test set when ``new_params`` is ``None``
         - computes time ratio (full-order time) / (ROM time) when ``new_params`` is ``None``
-
+        
         Parameters
         ----------
         full_order : bool, optional
@@ -735,7 +979,7 @@ class rom_simulation:
             Parameter values for out-of-sample evaluation. When provided, the
             method returns only the computed solutions and skips error and speed-up
             evaluation.
-
+        
         Returns
         -------
         rom_error : list of float
@@ -814,15 +1058,20 @@ class rom_simulation:
 
 
     def run_hyper_rom_simulation_ecsw(self, z, full_order = True, new_params = None):
-        """
+        """Run ECSW hyper-ROM evaluation.
+        
+        TL;DR
+        -----
         Run ECSW hyper-ROM evaluation.
-
+        
+        Notes
+        -----
         The method:
         - runs the ECSW hyper-reduced solver for each parameter
         - reconstructs a full field from reduced coordinates when requested
         - computes relative error in percent on the test set when ``new_params`` is ``None``
         - computes time ratio (full-order time) / (hyper-ROM time) when ``new_params`` is ``None``
-
+        
         Parameters
         ----------
         z : array_like
@@ -834,7 +1083,7 @@ class rom_simulation:
             Parameter values for out-of-sample evaluation. When provided, the
             method returns only the computed solutions and skips error and speed-up
             evaluation.
-
+        
         Returns
         -------
         hyper_rom_error : list of float
@@ -914,15 +1163,20 @@ class rom_simulation:
 
 
     def run_hyper_rom_simulation_ecm(self, z, full_order = True, new_params = None):
-        """
+        """Run ECM hyper-ROM evaluation.
+        
+        TL;DR
+        -----
         Run ECM hyper-ROM evaluation.
-
+        
+        Notes
+        -----
         The method:
         - runs the ECM hyper-reduced solver for each parameter
         - reconstructs a full field from reduced coordinates when requested
         - computes relative error in percent on the test set when ``new_params`` is ``None``
         - computes time ratio (full-order time) / (hyper-ROM time) when ``new_params`` is ``None``
-
+        
         Parameters
         ----------
         z : array_like
@@ -934,7 +1188,7 @@ class rom_simulation:
             Parameter values for out-of-sample evaluation. When provided, the
             method returns only the computed solutions and skips error and speed-up
             evaluation.
-
+        
         Returns
         -------
         hyper_rom_error : list of float
@@ -1014,15 +1268,20 @@ class rom_simulation:
 
 
     def run_hyper_rom_simulation_deim(self, z, deim_mat, sampled_rows, full_order = True, new_params = None):
-        """
+        """Run DEIM hyper-ROM evaluation.
+        
+        TL;DR
+        -----
         Run DEIM hyper-ROM evaluation.
-
+        
+        Notes
+        -----
         The method:
         - runs the DEIM hyper-reduced solver for each parameter
         - reconstructs a full field from reduced coordinates when requested
         - computes relative error in percent on the test set when ``new_params`` is ``None``
         - computes time ratio (full-order time) / (hyper-ROM time) when ``new_params`` is ``None``
-
+        
         Parameters
         ----------
         z : array_like
@@ -1038,7 +1297,7 @@ class rom_simulation:
             Parameter values for out-of-sample evaluation. When provided, the
             method returns only the computed solutions and skips error and speed-up
             evaluation.
-
+        
         Returns
         -------
         hyper_rom_error : list of float
