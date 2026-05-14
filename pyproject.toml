@@ -7,7 +7,7 @@ name = "skrom"
 version = "1.0.0"
 description = "A python toolbox for projection-based ROMs"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 
 authors = [
