@@ -120,27 +120,65 @@ pip install -e .[petsc311]   # optional
 ```
 scikit-rom/
 ├── docs/
-├── examples
-│   ├── computational_mechanics
-│   │   ├── dynamic
-│   │   └── static
-│   │       ├── linear
-│   │       └── non_linear
-│   └── heat_transfer
-│       ├── dynamic
-│       └── static
-│           ├── linear
-│           └── non_linear
-├── src
-│   └── skrom
-│       ├── fom
-│       ├── problem_classes
-│       ├── rom
-│       ├── templates
-│       └── utils
-│           ├── dynamics
-│           ├── reduced_basis
-│           └── visualization
+├── examples/
+│   ├── computational_mechanics/
+│   │   ├── dynamic/
+│   │   └── static/
+│   │       ├── linear/
+│   │       └── non_linear/
+│   └── heat_transfer/
+│       ├── dynamic/
+│       └── static/
+│           ├── linear/
+│           └── non_linear/
+├── src/
+│   └── skrom/
+│       ├── fom/
+│       │   └── fem_utils.py
+│       ├── problem_classes/
+│       │   └── static/
+│       │       ├── master_class.py
+│       │       └── master_class_parallel.py
+│       ├── rom/
+│       │   ├── bilinear_form_rom.py
+│       │   ├── linear_form_rom.py
+│       │   ├── rom_utils.py
+│       │   ├── rom_error_est.py
+│       │   ├── rom_error_est_t.py
+│       │   ├── deim/
+│       │   │   ├── deim.py
+│       │   │   ├── bilinear_form_hyperrom_deim.py
+│       │   │   └── linear_form_hyperrom_deim.py
+│       │   └── ecsw/
+│       │       ├── hyperreduce.py
+│       │       ├── custom_nnls.py
+│       │       ├── bilinear_form_hyperrom_ecsw.py
+│       │       └── linear_form_hyperrom_ecsw.py
+│       ├── templates/
+│       │   └── problem_template/
+│       │       ├── domain.py
+│       │       ├── bilinear_forms.py
+│       │       ├── linear_forms.py
+│       │       ├── properties.py
+│       │       ├── params.py
+│       │       ├── problem_def.py
+│       │       └── problem.ipynb
+│       └── utils/
+│           ├── imports.py
+│           ├── hdf5_store.py
+│           ├── save_h5.py
+│           ├── data_io/
+│           │   └── save_h5.py
+│           ├── dynamics/
+│           │   └── integrators.py
+│           ├── reduced_basis/
+│           │   └── svd.py
+│           └── visualization/
+│               ├── color_palette.py
+│               ├── generate_vtk.py
+│               ├── generate_vtu.py
+│               ├── plot_utils.py
+│               └── vtuwriter.py
 └── tests/
 ```
 
