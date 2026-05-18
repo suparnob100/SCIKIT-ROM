@@ -136,9 +136,8 @@ scikit-rom/
 │       ├── fom/
 │       │   └── fem_utils.py
 │       ├── problem_classes/
-│       │   └── static/
-│       │       ├── master_class.py
-│       │       └── master_class_parallel.py
+│       │   └── masterclass.py
+│       │   └── masterclass_parallel.py
 │       ├── rom/
 │       │   ├── bilinear_form_rom.py
 │       │   ├── linear_form_rom.py
