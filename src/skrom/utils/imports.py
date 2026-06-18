@@ -44,7 +44,7 @@ import meshio  # Mesh input/output library
 from scipy.stats.qmc import Sobol  # Sobol sequence sampler
 from scipy.stats.qmc import LatinHypercube  # Latin Hypercube sampler
 import importlib  # Import utilities
-from pyDOE import lhs  # Latin Hypercube design of experiments
+from pydoe import lhs  # Latin Hypercube design of experiments
 from pathlib import Path  # Filesystem path abstraction
 from scipy.linalg import qr  # QR decomposition
 from scipy.sparse import issparse, csr_matrix

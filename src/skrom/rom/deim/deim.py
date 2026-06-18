@@ -1,492 +1,500 @@
-"""Discrete Empirical Interpolation Method utilities.
+"""DEIM and S-OPT sampling for nonlinear reduced-order models.
 
 TL;DR
 -----
-This module selects interpolation degrees of freedom and elements for nonlinear reduced-order models.
-
-Notes
------
-It builds DEIM and SOPT-style reduced operators from snapshot bases and maps selected points back to mesh elements.
+Build a nonlinear POD basis, select sampled DOFs with DEIM or S-OPT, and
+construct the reduced gappy-POD operator used during online assembly.
 """
 
+from __future__ import annotations
+
 import numpy as np
-from skrom.fom.fem_utils import *  # Import FEM utility functions (e.g., element matrix computations)
-from skrom.rom.rom_utils import *             # Import ROM utility functions (e.g., snapshot handling, SVD selectors)
-from skrom.utils.reduced_basis.svd import *
-from scipy.linalg import qr
+
+from skrom.utils.reduced_basis.svd import svd_mode_selector
 
 
 class deim:
-    """Discrete Empirical Interpolation Method for nonlinear ROM acceleration.
-    
-    TL;DR
-    -----
-    Reduces computational cost of nonlinear terms in ROMs by ~1000x through strategic sampling and interpolation, enabling real-time nonlinear PDE solutions.
-    
-    Notes
-    -----
-    The Discrete Empirical Interpolation Method (DEIM) addresses the computational 
-    bottleneck in nonlinear reduced-order models where nonlinear terms must still 
-    be evaluated at all degrees of freedom. DEIM constructs an efficient 
-    approximation by:
-    
-    1. **Empirical Mode Analysis**: Computes dominant modes of nonlinear force 
-       snapshots using SVD to capture the essential nonlinear behavior patterns.
-    
-    2. **Optimal Point Selection**: Uses a greedy algorithm to select interpolation 
-       points that maximize information content while minimizing approximation error.
-    
-    3. **Projection Matrix Construction**: Builds a projection matrix that enables 
-       fast reconstruction of full nonlinear terms from interpolated values.
-    
-    4. **Element Mapping**: Maps selected degrees of freedom to finite element 
-       indicators for efficient sparse assembly operations.
-    
-    The method transforms the nonlinear term evaluation from O(n) to O(m) where 
-    m << n, achieving dramatic computational savings essential for real-time 
-    applications.
-    
-    Parameters
-    ----------
-    mesh : object
-        Finite element mesh containing connectivity information and node data.
-    F_nl : ndarray of shape (n_dofs, n_snapshots)  
-        Snapshot matrix of nonlinear force evaluations at various parameter values.
-        Each column represents the nonlinear force vector for one parameter instance.
-    V_sel : ndarray of shape (n_dofs, n_modes)
-        Reduced basis matrix from POD, used for solution space projection.
-    tol_f : float, default=1e-2
-        Tolerance for SVD mode selection based on singular value decay. Smaller 
-        values retain more modes for higher accuracy.
-    extra_modes : int, default=0
-        Additional empirical modes to retain beyond those selected by tolerance
-        criterion, useful for capturing marginal nonlinear effects.
-    
-    Attributes
-    ----------
-    U_fs : ndarray
-        Truncated empirical basis matrix containing selected nonlinear modes.
-    deim_mat : ndarray  
-        DEIM projection matrix enabling fast nonlinear term reconstruction:
-        F_nl_approx = V.T @ U_fs @ deim_mat @ F_nl_sampled
-    xi : ndarray of int
-        Binary element indicator vector marking which elements contain selected DOFs.
-    n_f_sel : int
-        Number of empirical modes selected for DEIM approximation.
-    
-    Notes
-    -----
-    DEIM is particularly effective for:
-    - Nonlinear PDEs with localized nonlinear effects
-    - Real-time control applications requiring fast ROM evaluation  
-    - Problems where nonlinear term evaluation dominates computational cost
-    - Systems with smooth nonlinear behavior amenable to low-rank approximation
-    
-    The method assumes the nonlinear terms can be well-approximated by a low-rank 
-    representation, which is typically valid for many physical systems.
-    
-    References
-    ----------
-    .. [1] Chaturantabut, S. and Sorensen, D.C., 2010. Nonlinear model reduction 
-           via discrete empirical interpolation method. SIAM journal on scientific 
-           computing, 32(5), pp.2737-2764.
-    
-    Examples
-    --------
-    >>> # Generate nonlinear force snapshots
-    >>> F_snapshots = compute_nonlinear_snapshots(problem, param_list)
-    >>> # Create DEIM approximation
-    >>> deim_obj = deim(mesh, F_snapshots, reduced_basis, tol_f=1e-3)
-    >>> deim_matrix, sample_points = deim_obj.select_elems()
-    >>> # Use in ROM: F_approx = V.T @ U @ deim_matrix @ F_sampled
+    """Train a DEIM/gappy-POD operator from nonlinear snapshots.
+
+    This class keeps the original scikit-rom public workflow intact:
+
+    ``deim(mesh_or_basis, F_nl, V_sel).select_elems()``
+
+    still returns ``(deim_mat, sampled_rows)`` and stores the selected element
+    mask in ``self.xi``.  The internals are stricter about snapshot orientation,
+    avoid duplicate samples, preserve S-OPT row order, and support optional
+    oversampling without counting ``extra_modes`` twice.
     """
 
-    def __init__(self, mesh, F_nl, V_sel, tol_f=1e-2, extra_modes=0):
-        """Initialize DEIM with nonlinear snapshots and reduction parameters.
-        
-        TL;DR
-        -----
-        Initialize DEIM with nonlinear snapshots and reduction parameters.
-        
-        Parameters
-        ----------
-        mesh : object
-            Finite element mesh object containing node connectivity matrix `t` 
-            and other geometric information needed for DOF-to-element mapping.
-        F_nl : ndarray of shape (n_dofs, n_snapshots)
-            Matrix of nonlinear force vector snapshots, where each column contains 
-            the nonlinear force evaluation at one parameter instance.
-        V_sel : ndarray of shape (n_dofs, n_modes)
-            Selected reduced basis matrix, typically from POD truncation of 
-            solution snapshots.
-        tol_f : float, default=1e-2
-            SVD tolerance for selecting empirical modes. Modes with normalized 
-            singular values below this threshold are discarded.
-        extra_modes : int, default=0
-            Number of additional modes to retain beyond the tolerance-based 
-            selection, providing extra approximation capacity.
-        
-        Notes
-        -----
-        The nonlinear snapshots F_nl should span the expected parameter range 
-        and capture the full variety of nonlinear behaviors. Quality of DEIM 
-        approximation depends critically on the representativeness of these snapshots.
-        """
-        self.mesh = mesh                          # Store finite element mesh data
-        self.tol_f = tol_f                        # Tolerance for singular value thresholding
-        self.V = V_sel                            # Reduced basis matrix 
-        self.extra_modes = extra_modes            # Number of extra modes beyond tolerance selection
-        self.F_nl = F_nl                          # Nonlinear force snapshot matrix
+    def __init__(
+        self,
+        mesh,
+        F_nl,
+        V_sel,
+        tol_f=1e-2,
+        extra_modes=0,
+        oversampling=0,
+        free_dofs=None,
+        candidate_rows=None,
+        verbose=False,
+    ):
+        self.sampling_space = mesh
+        self.mesh = getattr(mesh, "mesh", mesh)
+        self.F_nl = np.asarray(F_nl, dtype=float)
+        self.V = np.asarray(V_sel, dtype=float)
+        self.tol_f = float(tol_f)
+        self.extra_modes = _nonnegative_integer(extra_modes, "extra_modes")
+        self.oversampling = _nonnegative_integer(
+            oversampling,
+            "oversampling",
+        )
+        self.free_dofs = _optional_index_array(free_dofs, "free_dofs")
+        self.candidate_rows = _optional_index_array(
+            candidate_rows,
+            "candidate_rows",
+        )
+        self._row_map = None
+        self._candidate_local_rows = None
+        self.verbose = bool(verbose)
+        self._snapshots = self._validated_snapshots()
 
-    def select_elems(self, sopt=False):
-        """Select interpolation points and construct DEIM projection matrix.
-        
-        TL;DR
-        -----
-        Core DEIM algorithm that identifies optimal sampling points and builds the projection matrix for fast nonlinear term approximation.
-        
-        Notes
-        -----
-        This method performs the complete DEIM setup:
-        
-        1. **SVD Analysis**: Decomposes nonlinear snapshots to identify dominant 
-           empirical modes that capture essential nonlinear behavior patterns.
-        
-        2. **Mode Selection**: Applies tolerance-based truncation with optional 
-           extra modes to balance accuracy and computational efficiency.
-        
-        3. **Point Selection**: Uses greedy DEIM algorithm to select interpolation 
-           points that minimize approximation error in the empirical subspace.
-        
-        4. **Element Mapping**: Maps selected DOFs to finite element indicators 
-           for efficient sparse matrix assembly during online evaluation.
-        
-        5. **Projection Construction**: Builds the DEIM projection matrix that 
-           enables reconstruction: F_full ≈ U_fs @ pinv(U_fs[selected_rows, :]) @ F_sampled
-        
-        Returns
-        -------
-        deim_mat : ndarray of shape (n_modes, n_selected_points)
-            DEIM projection matrix for reconstructing full nonlinear terms from 
-            sampled values. Used as: F_approx = V.T @ U_fs @ deim_mat @ F_sampled
-        sampled_rows : list of int
-            Indices of degrees of freedom selected as DEIM interpolation points.
-            These are the only DOFs where nonlinear terms need evaluation.
-        
-        Notes
-        -----
-        The projection matrix construction uses the Moore-Penrose pseudoinverse 
-        to ensure numerical stability even when the empirical basis is not 
-        perfectly conditioned.
-        
-        The element mapping (self.xi) enables efficient assembly by identifying 
-        which finite elements contribute to the selected DOFs, allowing sparse 
-        matrix operations during online evaluation.
-        
-        Examples
-        --------
-        >>> deim_obj = deim(mesh, F_snapshots, basis_matrix)
-        >>> proj_matrix, points = deim_obj.select_elems()
-        >>> print(f"Selected {len(points)} points from {F_snapshots.shape[0]} DOFs")
-        >>> print(f"Reduction ratio: {F_snapshots.shape[0]/len(points):.1f}x")
-        """
-        # Determine the number of modes to retain using an SVD-based selector
-        n_f_sel, U_f = svd_mode_selector(self.F_nl, self.tol_f)
-        n_f_sel += self.extra_modes  # Include any additional modes specified
-        print(f"Selected modes: {n_f_sel}")
-        
-        # Truncate the full basis to only include the selected modes
-        U_fs = U_f[:, :n_f_sel]
-        
-        # Use the DEIM sampling strategy to select interpolation points
-        
-        if sopt:
-            f_basis_sampled, sampled_rows, _ = self.sopt_red(U_f, n_f_sel)
+    def _validated_snapshots(self):
+        if self.F_nl.ndim != 2 or self.F_nl.size == 0:
+            raise ValueError(
+                "F_nl must be a non-empty 2D snapshot matrix."
+            )
+        if not np.all(np.isfinite(self.F_nl)):
+            raise ValueError("F_nl must contain only finite values.")
+        if self.V.ndim != 2 or not np.all(np.isfinite(self.V)):
+            raise ValueError("V_sel must be a finite 2D basis matrix.")
+        if not 0.0 <= self.tol_f < 1.0:
+            raise ValueError("tol_f must lie in [0, 1).")
+
+        dof_count = self.V.shape[0]
+        if self.F_nl.shape[1] == dof_count:
+            snapshots = self.F_nl
+        elif self.F_nl.shape[0] == dof_count:
+            snapshots = self.F_nl.T
         else:
-            f_basis_sampled, sampled_rows = self.deim_red(U_f, n_f_sel)
+            raise ValueError(
+                "One axis of F_nl must match the number of rows in V_sel."
+            )
 
-        # Map selected DOF indices to element indicators
-        # Elements containing any selected DOF are marked for assembly
-        deim_dof = np.any(np.isin(self.mesh.t.T, sampled_rows), axis=1)
+        self._row_map = None
+        candidate_rows = self.candidate_rows
+        if self.free_dofs is not None:
+            if np.unique(self.free_dofs).size != self.free_dofs.size:
+                raise ValueError("free_dofs must not contain duplicate indices.")
+            if self.free_dofs.size == dof_count:
+                self._row_map = self.free_dofs
+            elif candidate_rows is None:
+                candidate_rows = self.free_dofs
 
-        # Convert the selected DOFs to a binary element indicator vector
-        self.xi = deim_dof.astype(int)
-        
-        # Build the DEIM projection matrix using pseudoinverse for numerical stability
-        # This matrix enables: F_full ≈ U_fs @ deim_mat @ F_sampled
-        self.deim_mat = self.V.T @ U_fs @ np.linalg.pinv(f_basis_sampled)
-        
-        # Store additional attributes for potential later use
-        self.U_fs = U_fs
-        self.n_f_sel = n_f_sel
+        self._candidate_local_rows = self._local_candidate_rows(
+            candidate_rows,
+            dof_count,
+        )
+        return snapshots
 
-        return self.deim_mat, sampled_rows
+    def _local_candidate_rows(self, candidate_rows, dof_count):
+        if candidate_rows is None:
+            return None
+        rows = np.asarray(candidate_rows, dtype=np.intp).ravel()
+        if rows.size == 0:
+            raise ValueError("candidate_rows must not be empty.")
+        if np.unique(rows).size != rows.size:
+            raise ValueError("candidate_rows must not contain duplicate indices.")
 
-    def deim_red(self, f_basis, num_f_basis_vectors_used):
-        """Execute greedy DEIM algorithm for optimal interpolation point selection.
-        
-        TL;DR
-        -----
-        Implements the core greedy algorithm that iteratively selects interpolation points to minimize approximation error in the empirical subspace.
-        
-        Notes
-        -----
-        The DEIM greedy algorithm works by:
-        
-        1. **Initial Selection**: Chooses the DOF with maximum absolute value in 
-           the first empirical mode as the starting interpolation point.
-        
-        2. **Iterative Refinement**: For each subsequent mode, solves for optimal 
-           interpolation coefficients using previously selected points, then 
-           selects the DOF with maximum residual as the next point.
-        
-        3. **Residual Minimization**: Each new point is chosen to minimize the 
-           approximation error when reconstructing the current empirical mode 
-           from previously selected points.
-        
-        This greedy strategy ensures that interpolation points capture maximum 
-        information content while maintaining numerical stability through 
-        well-conditioned interpolation matrices.
-        
-        Parameters
-        ----------
-        f_basis : ndarray of shape (n_dofs, n_modes)
-            Empirical basis matrix from SVD of nonlinear force snapshots.
-            Each column represents one empirical mode.
-        num_f_basis_vectors_used : int
-            Number of empirical modes to use for interpolation point selection.
-            Cannot exceed the total number of available modes.
-        
-        Returns
-        -------
-        f_basis_sampled : ndarray of shape (num_modes, num_modes)
-            Square matrix containing rows of the empirical basis corresponding 
-            to selected interpolation points. Used to construct the projection matrix.
-        sampled_rows : list of int
-            Ordered list of DOF indices selected as interpolation points.
-            The order reflects the greedy selection sequence.
-        
-        Notes
-        -----
-        The algorithm ensures that the interpolation matrix f_basis_sampled 
-        remains well-conditioned by construction, as each new point is chosen 
-        to maximize the residual norm.
-        
-        For problems with strong locality in nonlinear effects, DEIM typically 
-        selects points near regions of highest nonlinear activity, leading to 
-        physically intuitive sampling patterns.
-        
-        The computational complexity is O(m³) where m is the number of modes, 
-        making it efficient even for moderately large empirical subspaces.
-        
-        Examples
-        --------
-        >>> # Empirical basis from SVD  
-        >>> U, s, Vt = np.linalg.svd(F_snapshots, full_matrices=False)
-        >>> sampled_basis, indices = deim_obj.deim_red(U, n_modes=10)
-        >>> print(f"Condition number: {np.linalg.cond(sampled_basis):.2e}")
-        """
-        # Ensure we don't request more modes than available
-        num_basis_vectors = min(num_f_basis_vectors_used, f_basis.shape[1])
-        basis_size = f_basis.shape[0]
-        
-        # Initialize matrix to store sampled rows from the empirical basis
-        f_basis_sampled = np.zeros((num_basis_vectors, num_basis_vectors))
-        
-        # Track selected DOF indices and sampling status
-        sampled_rows = []
-        is_sampled = np.zeros(basis_size, dtype=bool)
+        if self._row_map is None:
+            if rows.max() >= dof_count:
+                raise ValueError(
+                    "candidate_rows must be valid row indices of V_sel."
+                )
+            return rows
 
-        # Initial selection: DOF with maximum absolute value in first mode
-        f_bv_max_global_row = np.argmax(np.abs(f_basis[:, 0]))
-        sampled_rows.append(f_bv_max_global_row)
-        is_sampled[f_bv_max_global_row] = True
+        global_to_local = {
+            int(global_row): local_row
+            for local_row, global_row in enumerate(self._row_map)
+        }
+        if all(int(row) in global_to_local for row in rows):
+            return np.asarray(
+                [global_to_local[int(row)] for row in rows],
+                dtype=np.intp,
+            )
+        if rows.max() < dof_count:
+            return rows
+        raise ValueError(
+            "candidate_rows must be local rows or global rows present in "
+            "free_dofs."
+        )
 
-        # Store the first row in the sampled basis matrix
-        f_basis_sampled[0, :] = f_basis[f_bv_max_global_row, :num_basis_vectors]
+    def select_elems(self, sopt=False, *, selection=None):
+        """Select sampled DOFs and construct the reduced interpolation matrix."""
+        strategy = _selection_name(selection, sopt)
+        # nonlinear_basis, singular_values = _left_singular_vectors(
+        #     self._snapshots
+        # )
+        # selected = _mode_count_from_tolerance(singular_values, self.tol_f)
 
-        # Greedy selection for remaining modes
-        for i in range(1, num_basis_vectors):
-            # Solve interpolation problem: find coefficients c such that
-            # f_basis_sampled[:i, :i] @ c ≈ f_basis_sampled[:i, i]
-            c = np.linalg.solve(f_basis_sampled[:i, :i], f_basis_sampled[:i, i])
-            
-            # Compute residual when approximating i-th mode using first i-1 modes
-            # at selected interpolation points
-            r_val = np.abs(f_basis[:, i] - np.dot(f_basis[:, :i], c))
-            
-            # Select DOF with maximum residual as next interpolation point
-            f_bv_max_global_row = np.argmax(r_val)
-            
-            # Update selection lists and sampling status
-            sampled_rows.append(f_bv_max_global_row)
-            is_sampled[f_bv_max_global_row] = True
+        selected, nonlinear_basis = svd_mode_selector(self._snapshots,    # Input: mean-centered training snapshots
+                                    tolerance=self.tol_f,    # Convergence criterion for mode selection
+                                    modes=True)        # Return both number of modes and basis vectors
 
-            # Add new row to sampled basis matrix
-            f_basis_sampled[i, :] = f_basis[f_bv_max_global_row, :num_basis_vectors]
 
-        return f_basis_sampled, sampled_rows
-    
-  
-    
-    def sopt_red(self, f_basis, num_f_basis_vectors_used):
-        """S-OPT sampling: selects rows maximising the S-optimality measure
-        S(Z^T Q) which jointly maximises column orthogonality and determinant
-        of the information matrix (Z^T Q)^T (Z^T Q).
-        
-        TL;DR
-        -----
-        S-OPT sampling: selects rows maximising the S-optimality measure.
-        
-        Notes
-        -----
-        Uses efficient Sherman-Morrison rank-1 updates to avoid recomputing
-        determinants at every candidate evaluation.
-        
-        Phase 1 (j < n_f): row + column expansion   — Slide 12/14 formula
-        Phase 2 (j >= n_f): row-only append (oversampling) — Slide 13/15 formula
-        
-        Parameters
-        ----------
-        f_basis : ndarray (N, n_modes_total)
-            Full empirical basis from SVD of nonlinear snapshots.
-        num_f_basis_vectors_used : int
-            Number of basis vectors (modes) to use.
-        
-        Returns
-        -------
-        f_sampled_row : ndarray
-            Rows of f_basis at the selected indices.
-        Z_indices : list of int
-            Selected row indices.
-        Z_boolean : ndarray of bool
-            Boolean mask of selected rows.
-        
-        References
-        ----------
-        Shin & Xiu, SIAM J. Sci. Comput. 38 (2016), pp. A385-A411.
-        Lauzon et al., SIAM J. Sci. Comput. 46 (2024), arXiv:2203.16494.
-        """
-        num_sampling_points = num_f_basis_vectors_used + self.extra_modes
-        n_f = min(num_f_basis_vectors_used, f_basis.shape[1])
-        f_basis_trunc = f_basis[:, :n_f]
+        n_modes = min(
+            selected + self.extra_modes,
+            nonlinear_basis.shape[1],
+        )
+        if n_modes <= 0:
+            raise ValueError("At least one nonlinear POD mode is required.")
 
-        # Orthogonal basis via QR
-        Q, _ = np.linalg.qr(f_basis_trunc)
-        N = Q.shape[0]
+        self.U_fs = nonlinear_basis[:, :n_modes]
+        self.singular_values = None #singular_values
+        self.n_f_sel = n_modes
+        n_samples = n_modes + self.oversampling
+        if n_samples > self.U_fs.shape[0]:
+            raise ValueError(
+                f"Requested {n_samples} samples for only "
+                f"{self.U_fs.shape[0]} available DOFs."
+            )
 
-        # ── first index: largest |entry| in first column ──
-        i_star = int(np.argmax(np.abs(Q[:, 0])))
-        Z_indices = [i_star]
-        remaining = list(range(N))
-        remaining.remove(i_star)
+        if strategy == "sopt":
+            sampled_basis, local_rows, _ = self.sopt_red(
+                self.U_fs,
+                n_modes,
+                num_samples=n_samples,
+                candidate_rows=self._candidate_local_rows,
+            )
+        else:
+            sampled_basis, local_rows = self.deim_red(
+                self.U_fs,
+                n_modes,
+                num_samples=n_samples,
+                candidate_rows=self._candidate_local_rows,
+            )
 
-        # ════════════════════════════════════════════════════════════════
-        # Phase 1:  j = 1 .. n_f-1   (row + column expansion)
-        #
-        #   Ã = [A c; r^T γ]  =>
-        #   S(Ã)^{2(m+1)} = det(A^T A) · (1+r^Tb)/∏(||Ae_k||²+r_k²)
-        #                   · (c^Tc+γ²-α)/(c^Tc+γ²)
-        #   b=(A^TA)^{-1}r, g=(A^TA)^{-1}A^Tc,
-        #   α=(c^TA+γr^T)(I-(1+r^Tb)^{-1}br^T)(g+γb)
-        # ════════════════════════════════════════════════════════════════
-        for j in range(1, n_f):
-            sel = np.array(Z_indices)
-            m = len(sel)  # == j (square matrix A is m×m)
+        local_rows = np.asarray(local_rows, dtype=np.intp)
+        global_rows = self._global_sample_indices(local_rows)
+        self.xi = self._element_mask(global_rows)
+        self.sampled_rows = global_rows
+        self.local_sampled_rows = local_rows
+        self.selection = strategy
+        self.sampled_basis = sampled_basis
+        self.interpolation_condition = float(np.linalg.cond(sampled_basis))
+        self.deim_mat = self.V.T @ self.U_fs @ np.linalg.pinv(sampled_basis)
 
-            A_mat = Q[sel, :j]                          # (m, j)
-            G_inv = np.linalg.inv(A_mat.T @ A_mat)      # (j, j)
-            c_vec = Q[sel, j]                            # (m,)
-            g_vec = G_inv @ (A_mat.T @ c_vec)            # (j,)
-            col_sq = np.sum(A_mat ** 2, axis=0)          # (j,)
-            ctc = float(c_vec @ c_vec)
+        if self.verbose:
+            print(
+                f"Selected {n_modes} nonlinear modes and {n_samples} "
+                f"{strategy.upper()} samples."
+            )
+        return self.deim_mat, global_rows
 
-            # Vectorised over candidates
-            cand = np.array(remaining)
-            R = Q[cand, :j]                              # (|cand|, j)
-            Gamma = Q[cand, j]                           # (|cand|,)
+    def _global_sample_indices(self, local_rows):
+        if self._row_map is None:
+            return local_rows.copy()
+        return self._row_map[local_rows]
 
-            B = R @ G_inv                                # (|cand|, j)
-            rtb = np.sum(R * B, axis=1)                  # (|cand|,)
+    def _element_mask(self, global_rows):
+        if hasattr(self.sampling_space, "element_dofs"):
+            element_dofs = np.asarray(
+                self.sampling_space.element_dofs,
+                dtype=np.intp,
+            ).T
+            n_full = int(self.sampling_space.N)
+        elif hasattr(self.mesh, "t") and hasattr(self.mesh, "p"):
+            n_full = int(self.mesh.p.shape[1])
+            if self.free_dofs is None and self.V.shape[0] != n_full:
+                raise ValueError(
+                    "A mesh can map DEIM samples only for scalar nodal "
+                    "spaces. Pass the scikit-fem Basis for higher-order, "
+                    "vector, mixed, or compact free-DOF spaces."
+                )
+            element_dofs = np.asarray(self.mesh.t, dtype=np.intp).T
+        else:
+            raise TypeError(
+                "DEIM training requires a scikit-fem Basis or mesh-like object."
+            )
 
-            # factor1 = (1+r^Tb) / ∏(col_sq + r_k²)
-            log_f1 = (np.log(np.maximum(1.0 + rtb, 1e-300))
-                      - np.sum(np.log(col_sq[None, :] + R ** 2), axis=1))
+        if global_rows.size and global_rows.max() >= n_full:
+            raise ValueError(
+                "A sampled global DOF lies outside the supplied sampling space."
+            )
+        return np.any(np.isin(element_dofs, global_rows), axis=1).astype(float)
 
-            ctA = c_vec @ A_mat                          # (j,)
-            denom2 = ctc + Gamma ** 2                    # (|cand|,)
+    @staticmethod
+    def deim_red(
+        f_basis,
+        num_f_basis_vectors_used,
+        *,
+        num_samples=None,
+        candidate_rows=None,
+    ):
+        """Select rows using original or oversampled greedy DEIM."""
+        basis = _truncated_basis(f_basis, num_f_basis_vectors_used)
+        n_dofs, n_modes = basis.shape
+        n_samples = n_modes if num_samples is None else int(num_samples)
+        candidates = _candidate_rows(candidate_rows, n_dofs)
+        if not n_modes <= n_samples <= candidates.size:
+            raise ValueError(
+                "num_samples must be between the retained mode count and "
+                "the candidate-row count."
+            )
 
-            scores = np.full(len(cand), -np.inf)
-            for ci in range(len(cand)):
-                if 1.0 + rtb[ci] <= 0:
+        sampled_rows = [
+            int(candidates[np.argmax(np.abs(basis[candidates, 0]))])
+        ]
+        if n_samples == 1:
+            return basis[sampled_rows, :], sampled_rows
+
+        if n_modes == 1:
+            order = np.argsort(-np.abs(basis[candidates, 0]), kind="stable")
+            sampled_rows = candidates[order[:n_samples]].astype(int).tolist()
+            return basis[sampled_rows, :], sampled_rows
+
+        samples_per_mode = int(np.ceil((n_samples - 1) / (n_modes - 1)))
+        candidate_mask = np.ones(n_dofs, dtype=bool)
+        candidate_mask[:] = False
+        candidate_mask[candidates] = True
+        for mode in range(1, n_modes):
+            for _ in range(samples_per_mode):
+                previous = basis[:, :mode]
+                sampled_previous = previous[sampled_rows, :]
+                coefficients = np.linalg.pinv(sampled_previous) @ basis[
+                    sampled_rows,
+                    mode,
+                ]
+                residual = np.abs(
+                    basis[:, mode] - previous @ coefficients
+                )
+                residual[~candidate_mask] = -np.inf
+                residual[sampled_rows] = -np.inf
+                sampled_rows.append(int(np.argmax(residual)))
+                if len(sampled_rows) == n_samples:
+                    return basis[sampled_rows, :], sampled_rows
+
+        return basis[sampled_rows, :], sampled_rows
+
+    @staticmethod
+    def sopt_red(
+        f_basis,
+        num_f_basis_vectors_used,
+        *,
+        num_samples=None,
+        candidate_rows=None,
+    ):
+        """Select rows by maximizing the S-OPT objective."""
+        basis = _truncated_basis(f_basis, num_f_basis_vectors_used)
+        Q, _ = np.linalg.qr(basis, mode="reduced")
+        n_dofs, n_modes = Q.shape
+        n_samples = n_modes if num_samples is None else int(num_samples)
+        candidates = _candidate_rows(candidate_rows, n_dofs)
+        if not n_modes <= n_samples <= candidates.size:
+            raise ValueError(
+                "num_samples must be between the retained mode count and "
+                "the candidate-row count."
+            )
+
+        first = int(candidates[np.argmax(np.abs(Q[candidates, 0]))])
+        selected = [first]
+        remaining = candidates[candidates != first]
+
+        for column in range(1, n_modes):
+            chosen = np.asarray(selected, dtype=np.intp)
+            A = Q[chosen, :column]
+            gram_inverse = np.linalg.inv(A.T @ A)
+            c = Q[chosen, column]
+            g = gram_inverse @ (A.T @ c)
+            column_norms = np.sum(A * A, axis=0)
+            c_norm = float(c @ c)
+
+            R = Q[remaining, :column]
+            gamma = Q[remaining, column]
+            B = R @ gram_inverse
+            rtb = np.sum(R * B, axis=1)
+            log_first = np.log(np.maximum(1.0 + rtb, 1e-300))
+            log_first -= np.sum(
+                np.log(np.maximum(column_norms[None, :] + R * R, 1e-300)),
+                axis=1,
+            )
+
+            cta = c @ A
+            scores = np.full(remaining.size, -np.inf)
+            identity = np.eye(column)
+            for candidate in range(remaining.size):
+                denominator = 1.0 + rtb[candidate]
+                total_norm = c_norm + gamma[candidate] ** 2
+                if denominator <= 0.0 or total_norm <= 0.0:
                     continue
-                ri = R[ci]
-                bi = B[ci]
-                gam = Gamma[ci]
+                projection = identity - np.outer(
+                    B[candidate],
+                    R[candidate],
+                ) / denominator
+                alpha = (
+                    (cta + gamma[candidate] * R[candidate])
+                    @ projection
+                    @ (g + gamma[candidate] * B[candidate])
+                )
+                second = total_norm - alpha
+                if second > 0.0:
+                    scores[candidate] = (
+                        log_first[candidate]
+                        + np.log(second)
+                        - np.log(total_norm)
+                    )
 
-                vec1 = ctA + gam * ri
-                proj = np.eye(j) - np.outer(bi, ri) / (1.0 + rtb[ci])
-                alpha = vec1 @ proj @ (g_vec + gam * bi)
+            best_position = _best_score_position(
+                scores,
+                Q,
+                selected,
+                remaining,
+                column + 1,
+            )
+            selected.append(int(remaining[best_position]))
+            remaining = np.delete(remaining, best_position)
 
-                f2_num = ctc + gam ** 2 - alpha
-                if f2_num <= 0 or denom2[ci] <= 0:
-                    continue
-                scores[ci] = log_f1[ci] + np.log(f2_num) - np.log(denom2[ci])
+        if n_samples > n_modes:
+            A = Q[selected, :]
+            gram_inverse = np.linalg.pinv(A.T @ A)
+            column_norms = np.sum(A * A, axis=0)
 
-            best = cand[int(np.argmax(scores))]
-            Z_indices.append(best)
-            remaining.remove(best)
+            for _ in range(n_samples - n_modes):
+                R = Q[remaining, :]
+                V = R @ gram_inverse
+                leverage = np.sum(V * R, axis=1)
+                scores = np.log(np.maximum(1.0 + leverage, 1e-300))
+                scores -= np.sum(
+                    np.log(
+                        np.maximum(
+                            column_norms[None, :] + R * R,
+                            1e-300,
+                        )
+                    ),
+                    axis=1,
+                )
+                best_position = _best_score_position(
+                    scores,
+                    Q,
+                    selected,
+                    remaining,
+                    n_modes,
+                )
+                best_row = R[best_position]
+                best_update = V[best_position]
+                denominator = 1.0 + leverage[best_position]
+                selected.append(int(remaining[best_position]))
+                remaining = np.delete(remaining, best_position)
+                gram_inverse -= np.outer(
+                    best_update,
+                    best_update,
+                ) / denominator
+                column_norms += best_row * best_row
 
-        # ════════════════════════════════════════════════════════════════
-        # Phase 2:  oversampling (row-only append, j >= n_f)
-        #
-        #   Ã = [A; r^T]  =>
-        #   S(Ã)^{2p} = det(A^TA) · (1+r^T(A^TA)^{-1}r) / ∏(||Ae_k||²+r_k²)
-        #
-        #   det(A^TA) is constant across candidates, so maximise:
-        #       (1 + r^T G_inv r) / ∏(col_sq_k + r_k²)
-        #
-        #   G_inv updated via Sherman-Morrison after each selection.
-        # ════════════════════════════════════════════════════════════════
-        if num_sampling_points > n_f:
-            sel = np.array(Z_indices)
-            A_mat = Q[sel, :]                            # (|sel|, n_f)
-            G = A_mat.T @ A_mat
-            try:
-                G_inv = np.linalg.inv(G)
-            except np.linalg.LinAlgError:
-                G_inv = np.linalg.pinv(G)
-            col_sq = np.sum(A_mat ** 2, axis=0)          # (n_f,)
+        selected_mask = np.zeros(n_dofs, dtype=bool)
+        selected_mask[selected] = True
+        return basis[selected, :], selected, selected_mask
 
-            for _ in range(num_sampling_points - n_f):
-                cand = np.array(remaining)
-                R = Q[cand, :]                           # (|cand|, n_f)
 
-                # Vectorised score
-                V = R @ G_inv                            # (|cand|, n_f)
-                rtGr = np.sum(V * R, axis=1)
-                log_num = np.log(np.maximum(1.0 + rtGr, 1e-300))
-                log_den = np.sum(np.log(col_sq[None, :] + R ** 2), axis=1)
-                scores = log_num - log_den
+def _left_singular_vectors(snapshots):
+    U, singular_values, _ = np.linalg.svd(snapshots.T, full_matrices=False)
+    return U, singular_values
 
-                bi = int(np.argmax(scores))
-                best = cand[bi]
-                r_best = R[bi]
-                v_best = V[bi]
 
-                Z_indices.append(best)
-                remaining.remove(best)
+def _mode_count_from_tolerance(singular_values, tolerance):
+    values = np.asarray(singular_values, dtype=float).reshape(-1)
+    if values.size == 0:
+        raise ValueError("At least one singular value is required.")
+    total = float(np.sum(values * values))
+    if total <= 0.0:
+        return 1
+    trailing = np.cumsum(values[::-1] ** 2)[::-1]
+    error_after_k = np.concatenate((trailing[1:], np.array([0.0])))
+    relative_error = np.sqrt(error_after_k / total)
+    selected = np.flatnonzero(relative_error <= float(tolerance))
+    return int(selected[0] + 1) if selected.size else values.size
 
-                # Sherman-Morrison update
-                G_inv -= np.outer(v_best, v_best) / (1.0 + rtGr[bi])
-                col_sq += r_best ** 2
 
-        # ── pack outputs ──
-        Z_boolean = np.zeros(N, dtype=bool)
-        Z_boolean[Z_indices] = True
-        f_sampled_row = f_basis_trunc[Z_boolean, :]
+def _nonnegative_integer(value, name):
+    if not isinstance(value, (int, np.integer)) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer.")
+    return int(value)
 
-        print(f"{Z_indices=}")
-        return f_sampled_row, Z_indices, Z_boolean
-    
-    
+
+def _optional_index_array(value, name):
+    if value is None:
+        return None
+    rows = np.asarray(value, dtype=np.intp).ravel()
+    if rows.size == 0:
+        raise ValueError(f"{name} must not be empty.")
+    if rows.min() < 0:
+        raise ValueError(f"{name} must contain non-negative indices.")
+    return rows
+
+
+def _candidate_rows(candidate_rows, row_count):
+    if candidate_rows is None:
+        return np.arange(row_count, dtype=np.intp)
+    rows = np.asarray(candidate_rows, dtype=np.intp).ravel()
+    if rows.size == 0:
+        raise ValueError("candidate_rows must not be empty.")
+    if rows.min() < 0 or rows.max() >= row_count:
+        raise ValueError("candidate_rows contains an invalid basis row.")
+    if np.unique(rows).size != rows.size:
+        raise ValueError("candidate_rows must not contain duplicate indices.")
+    return rows
+
+
+def _selection_name(selection, legacy_sopt):
+    if selection is None:
+        return "sopt" if legacy_sopt else "deim"
+    name = (
+        str(selection)
+        .strip()
+        .lower()
+        .replace("-", "")
+        .replace("_", "")
+        .replace(" ", "")
+    )
+    if name not in {"deim", "sopt"}:
+        raise ValueError("selection must be 'deim' or 'sopt'.")
+    if legacy_sopt and name != "sopt":
+        raise ValueError("sopt=True conflicts with selection='deim'.")
+    return name
+
+
+def _truncated_basis(f_basis, requested_modes):
+    basis = np.asarray(f_basis, dtype=float)
+    if basis.ndim != 2 or basis.size == 0:
+        raise ValueError("f_basis must be a non-empty two-dimensional array.")
+    modes = min(int(requested_modes), basis.shape[1])
+    if modes <= 0:
+        raise ValueError("At least one basis vector is required.")
+    return basis[:, :modes]
+
+
+def _sopt_value(matrix):
+    gram = matrix.T @ matrix
+    sign, log_determinant = np.linalg.slogdet(gram)
+    column_norms = np.linalg.norm(matrix, axis=0)
+    if sign <= 0.0 or np.any(column_norms == 0.0):
+        return -np.inf
+    return (
+        0.5 * log_determinant - np.sum(np.log(column_norms))
+    ) / matrix.shape[1]
+
+
+def _best_score_position(scores, Q, selected, remaining, column_count):
+    if np.any(np.isfinite(scores)):
+        return int(np.argmax(scores))
+    exact_scores = np.array(
+        [
+            _sopt_value(Q[[*selected, int(candidate)], :column_count])
+            for candidate in remaining
+        ]
+    )
+    return int(np.argmax(exact_scores))
+
+
+DEIM = deim
+
+__all__ = ["DEIM", "deim"]

@@ -24,7 +24,7 @@ mathtext.fontset : cm
 ## Figure properties
 figure.edgecolor : black
 figure.facecolor : white
-figure.dpi : 200
+figure.dpi : 150
 
 
 ## Axes properties

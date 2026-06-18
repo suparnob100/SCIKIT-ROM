@@ -4,7 +4,7 @@ Version: 1.0.0
 Summary: A python toolbox for projection-based ROMs
 Author-email: Ali Syed <saabidi1@tamu.edu>, Suparno Bhattacharyya <suparno@iitisc.ac.in>
 License: MIT
-Requires-Python: >=3.8
+Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: numpy
 Requires-Dist: scipy
@@ -29,11 +29,22 @@ Requires-Dist: petsc4py @ file:./petsc_installer/petsc4py-3.23.2-cp311-cp311-mac
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="90" />
 </p> -->
 
-<p>
+<!--<p>
   <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="85" align="left">
-  <img src="https://via.placeholder.com/9999x1/ffffff/ffffff.png" alt="" width="99" height="85">
+  <img src="https://via.placeholder.com/9999x1/ffffff/ffffff.png" alt="" width="80" height="85">
   <img src="docs/resources/images/iitism-logo.jpg" alt="IIT (ISM) Dhanbad" width="85" align="right">
-</p>
+</p> -->
+
+<table style="width:100%;">
+  <tr>
+    <td style="text-align:left; width:50%;">
+      <img src="docs/resources/images/image_tamids.png" alt="TAMIDS" width="85">
+    </td>
+    <td style="text-align:right; width:50%;">
+      <img src="docs/resources/images/iitism-logo.jpg" alt="IIT(ISM) Dhanbad" width="85">
+    </td>
+  </tr>
+</table>
 
 
 # scikit-rom (skrom)
@@ -135,27 +146,64 @@ pip install -e .[petsc311]   # optional
 ```
 scikit-rom/
 ├── docs/
-├── examples
-│   ├── computational_mechanics
-│   │   ├── dynamic
-│   │   └── static
-│   │       ├── linear
-│   │       └── non_linear
-│   └── heat_transfer
-│       ├── dynamic
-│       └── static
-│           ├── linear
-│           └── non_linear
-├── src
-│   └── skrom
-│       ├── fom
-│       ├── problem_classes
-│       ├── rom
-│       ├── templates
-│       └── utils
-│           ├── dynamics
-│           ├── reduced_basis
-│           └── visualization
+├── examples/
+│   ├── computational_mechanics/
+│   │   ├── dynamic/
+│   │   └── static/
+│   │       ├── linear/
+│   │       └── non_linear/
+│   └── heat_transfer/
+│       ├── dynamic/
+│       └── static/
+│           ├── linear/
+│           └── non_linear/
+├── src/
+│   └── skrom/
+│       ├── fom/
+│       │   └── fem_utils.py
+│       ├── problem_classes/
+│       │   └── masterclass.py
+│       │   └── masterclass_parallel.py
+│       ├── rom/
+│       │   ├── bilinear_form_rom.py
+│       │   ├── linear_form_rom.py
+│       │   ├── rom_utils.py
+│       │   ├── rom_error_est.py
+│       │   ├── rom_error_est_t.py
+│       │   ├── deim/
+│       │   │   ├── deim.py
+│       │   │   ├── bilinear_form_hyperrom_deim.py
+│       │   │   └── linear_form_hyperrom_deim.py
+│       │   └── ecsw/
+│       │       ├── hyperreduce.py
+│       │       ├── custom_nnls.py
+│       │       ├── bilinear_form_hyperrom_ecsw.py
+│       │       └── linear_form_hyperrom_ecsw.py
+│       ├── templates/
+│       │   └── problem_template/
+│       │       ├── domain.py
+│       │       ├── bilinear_forms.py
+│       │       ├── linear_forms.py
+│       │       ├── properties.py
+│       │       ├── params.py
+│       │       ├── problem_def.py
+│       │       └── problem.ipynb
+│       └── utils/
+│           ├── imports.py
+│           ├── hdf5_store.py
+│           ├── save_h5.py
+│           ├── data_io/
+│           │   └── save_h5.py
+│           ├── dynamics/
+│           │   └── integrators.py
+│           ├── reduced_basis/
+│           │   └── svd.py
+│           └── visualization/
+│               ├── color_palette.py
+│               ├── generate_vtk.py
+│               ├── generate_vtu.py
+│               ├── plot_utils.py
+│               └── vtuwriter.py
 └── tests/
 ```
 
@@ -396,7 +444,7 @@ Min Rel L2 Error over time/parameter: 6.5942e-14
 
 **Python Version**
 
-* Requires **Python 3.8** or higher
+* Requires **Python 3.11** or higher
 
 **Core Dependencies**
 The project depends on the following libraries:

@@ -27,6 +27,12 @@ dependencies = [
   "scikit-learn",
   "h5py",
   "gmsh",
+  "plotly",
+  "ipywidgets",
+  "nbformat",
+  "anywidget",
+  "jupyterlab_widgets",
+  "ipykernel",
 
   # Install local style package automatically
   "sci_mplstyle_package @ file:./src/skrom/utils/visualization/sci_mplstyle_package"
@@ -65,6 +71,16 @@ where = ["src"]
 skrom = [
   "templates/problem_template/*.py",
   "templates/problem_template/*.ipynb",
+
+  "assets/fonts/lora/*.ttf",
+  "assets/fonts/lora/*.otf",
+  "assets/fonts/lora/*.txt",
+  "assets/fonts/lora/LICENSE*",
+
+  "assets/fonts/latinmodern/*.ttf",
+  "assets/fonts/latinmodern/*.otf",
+  "assets/fonts/latinmodern/*.txt",
+  "assets/fonts/latinmodern/LICENSE*",
 ]
 
 [tool.setuptools.exclude-package-data]
